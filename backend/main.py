@@ -25,6 +25,15 @@ MODEL_NAME = "gpt-3.5-turbo"
 
 app = FastAPI()
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "message": "SPECTER Legal Assistant API is running"}
+
+@app.get("/")
+async def root():
+    return {"message": "SPECTER Legal Assistant API", "docs": "/docs"}
+
 # Database events
 @app.on_event("startup")
 async def startup_event():
