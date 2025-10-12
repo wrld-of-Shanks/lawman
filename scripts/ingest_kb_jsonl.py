@@ -1,9 +1,12 @@
-import json
 import os
+import sys
+import json
+import logging
 import sqlite3
 from typing import List, Dict
 
-# Reuse embedding store utilities
+# Add parent directory to path to import backend modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.embed_store import add_chunks_to_db
 
 DB_FILE = "legal_acts.db"

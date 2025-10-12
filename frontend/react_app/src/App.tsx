@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import VoiceAssistant from './VoiceAssistant';
+import Auth from './Auth';
+import Dashboard from './Dashboard';
+import config from './config';
 
 function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -12,8 +14,47 @@ function App() {
   const [servicesOpen, setServicesOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>("");
-  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెలుగు', 'మరాఠీ'];
+  const [solutionsProblem, setSolutionsProblem] = useState('');
+  const [solutionsResponse, setSolutionsResponse] = useState('');
+  const [solutionsLoading, setSolutionsLoading] = useState(false);
+  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెলుగు', 'മലയാളം'];
   const [selectedLanguage, setSelectedLanguage] = useState<string>(() => localStorage.getItem('specter_lang') || 'English');
+
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  const handleLogin = (userData: any) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  // Check for existing authentication on app load
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      // Verify token and get user data
+      fetch(`${config.API_BASE_URL}/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Token invalid');
+      })
+      .then(userData => {
+        setUser(userData);
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+      });
+    }
+  }, []);
 
   // Listen for voice assistant navigation events
   useEffect(() => {
@@ -31,6 +72,36 @@ function App() {
       window.removeEventListener('navigateTo', handleVoiceNavigation as EventListener);
     };
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        await fetch(`${config.API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <Auth onLogin={handleLogin} />;
+  }
+
+  // If authenticated and on dashboard view, show dashboard
+  if (currentView === 'dashboard' && isAuthenticated) {
+    return <Dashboard user={user} onLogout={handleLogout} onNavigateHome={() => setCurrentView('home')} />;
+  }
 
   const t = (key: string): string => {
     const dict: Record<string, Record<string, string>> = {
@@ -52,7 +123,7 @@ function App() {
     setIsLoading(true);
     try {
       const prefixed = selectedLanguage === 'English' ? chatMessage : `Respond in ${selectedLanguage}. ${chatMessage}`;
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${config.API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prefixed })
@@ -68,7 +139,7 @@ function App() {
   const handleTranslate = async () => {
     if (!chatResponse.trim() || selectedLanguage === 'English') return;
     try {
-      const resp = await fetch('http://localhost:8000/translate', {
+      const resp = await fetch(`${config.TRANSLATE_API_URL}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: chatResponse, target_lang: selectedLanguage })
@@ -76,6 +147,28 @@ function App() {
       const data = await resp.json();
       if (data.translated) setChatResponse(data.translated);
     } catch(e) {}
+  };
+
+  const handleSolutionsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!solutionsProblem.trim()) return;
+    
+    setSolutionsLoading(true);
+    setSolutionsResponse('');
+    
+    try {
+      const solutionsMessage = `provide legal solutions for this problem: ${solutionsProblem}`;
+      const response = await fetch(`${config.API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: solutionsMessage })
+      });
+      const data = await response.json();
+      setSolutionsResponse(data.answer);
+    } catch (error) {
+      setSolutionsResponse('Error connecting to SPECTER. Please try again.');
+    }
+    setSolutionsLoading(false);
   };
 
   const renderContent = () => {
@@ -138,7 +231,7 @@ function App() {
                 try {
                   const form = new FormData();
                   form.append('file', selectedFile);
-                  const resp = await fetch('http://localhost:8000/upload', {
+                  const resp = await fetch(`${config.API_BASE_URL}/upload`, {
                     method: 'POST',
                     body: form
                   });
@@ -167,10 +260,30 @@ function App() {
           <div className="bot-interface">
             <h2>Legal Solutions</h2>
             <p>Get detailed legal solutions for your problems</p>
-            <form className="solutions-form" onSubmit={(e) => e.preventDefault()}>
-              <textarea placeholder="Describe your legal problem..." className="solutions-input" />
-              <button className="solutions-btn" type="submit">Get Solutions</button>
+            <form className="solutions-form" onSubmit={handleSolutionsSubmit}>
+              <textarea 
+                value={solutionsProblem}
+                onChange={(e) => setSolutionsProblem(e.target.value)}
+                placeholder="Describe your legal problem in detail..."
+                className="solutions-input"
+                rows={4}
+              />
+              <button 
+                className="solutions-btn" 
+                type="submit" 
+                disabled={solutionsLoading || !solutionsProblem.trim()}
+              >
+                {solutionsLoading ? 'Analyzing...' : 'Get Legal Solutions'}
+              </button>
             </form>
+            
+            {solutionsResponse && (
+              <div className="solutions-response">
+                <h3>Legal Solutions:</h3>
+                <FormattedResponse text={solutionsResponse} />
+              </div>
+            )}
+            
             <button onClick={() => setCurrentView('home')} className="back-btn">
               ← Back to Home
             </button>
@@ -270,20 +383,35 @@ function App() {
               </div>
             )}
           </div>
+          {isAuthenticated && (
+            <button className="status-button" onClick={() => setCurrentView('dashboard')}>
+              Status
+            </button>
+          )}
         </div>
       </nav>
 
       {/* Slide-out Sidebar */}
       <nav className={`side-nav ${sidebarOpen ? 'open' : ''}`}>
         <ul>
+          {isAuthenticated && (
+            <li className="user-info">
+              {user?.full_name || 'User'}
+            </li>
+          )}
           <li className={currentView === 'home' ? 'active' : ''} onClick={() => { setCurrentView('home'); setSidebarOpen(false); }}>
             {t('home')}
           </li>
           <li onClick={() => { setCurrentView('chat'); setSidebarOpen(false); }}>{t('chat')}</li>
           <li onClick={() => { setCurrentView('upload'); setSidebarOpen(false); }}>{t('upload')}</li>
-          
           <li onClick={() => { setCurrentView('solutions'); setSidebarOpen(false); }}>{t('solutions')}</li>
           <li onClick={() => { setCurrentView('contact'); setSidebarOpen(false); }}>{t('contact')}</li>
+          {isAuthenticated && (
+            <>
+              <li onClick={() => { setCurrentView('dashboard'); setSidebarOpen(false); }}>Dashboard</li>
+              <li onClick={() => { handleLogout(); setSidebarOpen(false); }}>Logout</li>
+            </>
+          )}
         </ul>
       </nav>
       {sidebarOpen && <div className="backdrop" onClick={() => setSidebarOpen(false)} />}
@@ -300,8 +428,8 @@ function App() {
         <div className="scroll-line"></div>
       </div>
 
-      {/* Voice Assistant */}
-      <VoiceAssistant />
+      {/* Voice Assistant - Disabled for now */}
+      {/* <VoiceAssistant /> */}
     </div>
   );
 }

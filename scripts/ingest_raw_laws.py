@@ -1,7 +1,11 @@
 import os
+import sys
+import json
+import logging
 import sqlite3
-from typing import List, Dict
 
+# Add parent directory to path to import backend modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.doc_parser import parse_and_chunk
 from backend.embed_store import add_chunks_to_db
 
