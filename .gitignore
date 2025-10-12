@@ -19,9 +19,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual Environments
+# Virtual environments
 .env
 .venv
 env/
@@ -30,20 +29,14 @@ ENV/
 env.bak/
 venv.bak/
 
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # Node.js
@@ -53,20 +46,24 @@ yarn-debug.log*
 yarn-error.log*
 
 # React build
-/frontend/react_app/build/
+build/
 
-# Database files
+# Logs
+*.log
+
+# Database files (now using MongoDB)
 *.db
 *.sqlite
 *.sqlite3
 
-# Logs
-*.log
-logs/
-
 # Temporary files
+temp_*
 *.tmp
-*.temp
+
+# Backup files
+*.bak
+*.backup
+*.save
 
 # ChromaDB
 /data/processed/chroma/
@@ -76,7 +73,16 @@ logs/
 *.safetensors
 *.pt
 *.pth
+
+# Deployment artifacts
+Procfile
+vercel.json
+railway.json
+render.yaml
+
+# Trace and cache directories
 trace/
+.cache/
 
 # Local Netlify folder
 .netlify

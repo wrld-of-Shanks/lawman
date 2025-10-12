@@ -45,7 +45,7 @@ class TracingSystem:
         user_agent: Optional[str] = None
     ):
         """Log a trace event to MongoDB"""
-        if not self.traces_collection:
+        if self.traces_collection is None:
             return
             
         # Sanitize sensitive data
@@ -95,7 +95,7 @@ class TracingSystem:
         limit: int = 100
     ) -> List[Dict[str, Any]]:
         """Retrieve traces with optional filtering"""
-        if not self.traces_collection:
+        if self.traces_collection is None:
             return []
             
         query = {}
@@ -122,7 +122,7 @@ class TracingSystem:
 
     async def get_user_activity(self, user_id: str, days: int = 7) -> Dict[str, Any]:
         """Get user activity summary for the last N days"""
-        if not self.traces_collection:
+        if self.traces_collection is None:
             return {}
             
         start_date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -158,7 +158,7 @@ class TracingSystem:
 
     async def get_system_stats(self) -> Dict[str, Any]:
         """Get overall system statistics"""
-        if not self.traces_collection:
+        if self.traces_collection is None:
             return {}
             
         total_traces = await self.traces_collection.count_documents({})
