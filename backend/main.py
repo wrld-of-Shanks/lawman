@@ -18,6 +18,9 @@ import re
 from openai import OpenAI
 from auth_mongo import auth_router
 from mongodb_config import connect_to_mongo, close_mongo_connection, create_indexes, get_legal_acts_collection, get_sync_database
+from tracing import tracing, TraceEvents, log_system_event, log_chat_event
+import uuid
+import time
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -39,6 +42,12 @@ async def root():
 async def startup_event():
     await connect_to_mongo()
     await create_indexes()
+    await tracing.initialize()
+    await log_system_event(TraceEvents.SYSTEM_START, {
+        "version": "1.2.0",
+        "timestamp": time.time(),
+        "environment": "development" if os.getenv("MONGODB_URL", "").startswith("mongodb://localhost") else "production"
+    })
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -46,6 +55,44 @@ async def shutdown_event():
 
 # Include auth router
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
+
+# Request tracing middleware
+@app.middleware("http")
+async def trace_requests(request: Request, call_next):
+    start_time = time.time()
+    request_id = str(uuid.uuid4())
+    
+    # Get user info from token if available
+    user_id = None
+    try:
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            # Extract user from token (simplified)
+            user_id = "authenticated_user"  # Would decode JWT in production
+    except:
+        pass
+    
+    response = await call_next(request)
+    
+    process_time = time.time() - start_time
+    
+    # Log request trace
+    await tracing.log_trace(
+        "http.request",
+        {
+            "method": request.method,
+            "path": str(request.url.path),
+            "status_code": response.status_code,
+            "process_time_ms": round(process_time * 1000, 2),
+            "query_params": dict(request.query_params),
+        },
+        user_id=user_id,
+        request_id=request_id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+    
+    return response
 
 # Add CORS middleware
 app.add_middleware(
@@ -109,10 +156,15 @@ KEYWORD_ALIASES = {
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    start_time = time.time()
+    
     # Detect language directive, and strip it for intent matching
     target_lang, stripped = detect_target_language_and_strip(request.message)
     user_msg = (stripped or request.message).lower()
     print(f"Received chat message: {user_msg}")
+    
+    # Log chat request
+    await log_chat_event("anonymous", request.message)
     # Legal solutions request - simplified for memory optimization
     if user_msg.startswith("provide legal solutions for this problem:"):
         return format_structured_response(
@@ -140,16 +192,78 @@ async def chat(request: ChatRequest):
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    content = await file.read()
-    filename = f"uploads/{file.filename}"
-    
-    # Create uploads directory if it doesn't exist
-    os.makedirs("uploads", exist_ok=True)
-    
-    # Save the file
-    with open(filename, "wb") as f:
-        f.write(content)
-    return {"filename": file.filename, "status": "uploaded"}
+    try:
+        # Save the uploaded file temporarily
+        temp_file_path = f"temp_{file.filename}"
+        with open(temp_file_path, "wb") as temp_file:
+            temp_file.write(await file.read())
+        
+        # Parse and chunk the document
+        chunks = parse_and_chunk(temp_file_path)
+        
+        # Add chunks to the database
+        add_chunks_to_db(chunks, file.filename)
+        
+        # Clean up the temporary file
+        os.remove(temp_file_path)
+        
+        # Log document upload
+        await tracing.log_trace(
+            TraceEvents.DOC_UPLOAD,
+            {
+                "filename": file.filename,
+                "file_size": file.size,
+                "chunks_created": len(chunks),
+                "success": True
+            }
+        )
+        
+        return {"message": f"File '{file.filename}' uploaded and processed successfully."}
+    except Exception as e:
+        # Log upload error
+        await tracing.log_trace(
+            TraceEvents.DOC_ERROR,
+            {
+                "filename": file.filename,
+                "error": str(e),
+                "success": False
+            }
+        )
+        return {"error": f"Failed to process file: {str(e)}"}
+
+@app.get("/admin/traces")
+async def get_traces(
+    event_type: Optional[str] = None,
+    user_id: Optional[str] = None,
+    limit: int = 50
+):
+    """Get system traces for monitoring and debugging"""
+    traces = await tracing.get_traces(
+        event_type=event_type,
+        user_id=user_id,
+        limit=limit
+    )
+    return {
+        "traces": traces,
+        "count": len(traces),
+        "filters": {
+            "event_type": event_type,
+            "user_id": user_id,
+            "limit": limit
+        }
+    }
+
+@app.get("/admin/stats")
+async def get_system_stats():
+    """Get overall system statistics"""
+    stats = await tracing.get_system_stats()
+    return stats
+
+@app.get("/admin/user-activity/{user_id}")
+async def get_user_activity(user_id: str, days: int = 7):
+    """Get user activity summary"""
+    activity = await tracing.get_user_activity(user_id, days)
+    return activity
 
 class LawyerContactRequest(BaseModel):
     name: str

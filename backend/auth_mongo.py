@@ -1,25 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timedelta
-import json
-import traceback
+from typing import Optional
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from motor.motor_asyncio import AsyncIOMotorClient
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from pydantic import BaseModel
 import os
-import jwt
 import random
 import string
-from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 import smtplib
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from mongodb_config import get_users_collection, get_otps_collection
+from tracing import TraceEvents, log_auth_event, tracing
 from dotenv import load_dotenv
-from mongodb_config import (
-    get_users_collection, 
-    get_user_sessions_collection, 
-    get_otps_collection,
-    get_database
-)
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
@@ -258,52 +254,38 @@ async def verify_email(otp_data: OTPVerify):
 
 @auth_router.post("/login")
 async def login(user_data: UserLogin):
-    try:
-        # Get user from database
-        user = await get_user_by_email(user_data.email)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
-            )
-        
-        # Verify password
-        if not verify_password(user_data.password, user["password_hash"]):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
-            )
-        
-        # Check if user is verified
-        if not user.get("is_verified", False):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Please verify your email before logging in"
-            )
-        
-        # Create tokens
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user["email"]}, expires_delta=access_token_expires
-        )
-        refresh_token = create_refresh_token(data={"sub": user["email"]})
-        
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
-            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Login error: {e}")
-        print(traceback.format_exc())
+    user = await get_user_by_email(user_data.email)
+    
+    if not user or not verify_password(user_data.password, user["password"]):
+        await log_auth_event(TraceEvents.AUTH_LOGIN, user_data.email, False, {"reason": "invalid_credentials"})
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
         )
+    
+    if not user.get("is_verified", False):
+        await log_auth_event(TraceEvents.AUTH_LOGIN, user_data.email, False, {"reason": "email_not_verified"})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Please verify your email first"
+        )
+    
+    # Generate tokens
+    access_token = create_access_token(data={"sub": user["email"]})
+    refresh_token = create_refresh_token(data={"sub": user["email"]})
+    
+    # Log successful login
+    await log_auth_event(TraceEvents.AUTH_LOGIN, user_data.email, True, {
+        "user_id": str(user["_id"]),
+        "login_time": datetime.utcnow().isoformat()
+    })
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    }
 
 @auth_router.post("/refresh-token", response_model=Token)
 async def refresh_token(refresh_token: str):
