@@ -8,20 +8,22 @@ import os
 from pydantic import BaseModel
 # Use regular string instead of EmailStr to avoid dependency issues
 from typing import Optional
-from doc_parser import parse_and_chunk
-from embed_store import add_chunks_to_db
-from chat_engine import answer_query
+# Commented out heavy dependencies for production deployment
+# from doc_parser import parse_and_chunk
+# from embed_store import add_chunks_to_db
+# from chat_engine import answer_query
 import smtplib
 from email.mime.text import MIMEText
 import sqlite3
 import re
-from openai import OpenAI
+# OpenAI temporarily disabled to reduce memory usage
+# from openai import OpenAI
 from auth_mongo import auth_router
 from mongodb_config import connect_to_mongo, close_mongo_connection, create_indexes, get_legal_acts_collection, get_sync_database
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-MODEL_NAME = "gpt-3.5-turbo"
+# Initialize OpenAI client (disabled for memory optimization)
+# client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+# MODEL_NAME = "gpt-3.5-turbo"
 
 app = FastAPI()
 
@@ -113,36 +115,14 @@ async def chat(request: ChatRequest):
     target_lang, stripped = detect_target_language_and_strip(request.message)
     user_msg = (stripped or request.message).lower()
     print(f"Received chat message: {user_msg}")
-    # If it's a legal solutions request, always use LLM with a detailed system prompt
+    # Legal solutions request - simplified for memory optimization
     if user_msg.startswith("provide legal solutions for this problem:"):
-        print(f"DEBUG: Legal solutions request detected!")
-        print(f"DEBUG: OpenAI API Key exists: {bool(os.getenv('OPENAI_API_KEY'))}")
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[
-                    {"role": "system", "content": (
-                        "You are SPECTER, a legal assistant chatbot specialized in Indian laws (criminal, civil, traffic). "
-                        "Always respond using this exact structure (plain text, no markdown):\n"
-                        "Answer: <direct, concise answer>\n"
-                        "Legal Reference: <relevant IPC/BNS/BNSS/BSA/MVA/CMVR sections>\n"
-                        "Explanation: <simple, layperson terms>\n"
-                        "Next Steps:\n- <Step 1>\n- <Step 2>\n- <Step 3>\n"
-                        "Do not suggest consulting a lawyer unless the question is outside the dataset or requires human intervention."
-                    )},
-                    {"role": "user", "content": request.message}
-                ]
-            )
-            answer = response.choices[0].message.content
-            return {"answer": answer}
-        except Exception as e:
-            print(f"OpenAI API error: {e}")
-            return format_structured_response(
-                answer="No direct solution found.",
-                legal_reference="",
-                explanation="Please rephrase your question or consult a lawyer.",
-                steps=["Contact a local lawyer with your documents."]
-            )
+        return format_structured_response(
+            answer="Legal consultation service is temporarily unavailable.",
+            legal_reference="Please refer to relevant Indian legal codes",
+            explanation="For detailed legal advice, please consult with a qualified lawyer.",
+            steps=["Contact a local lawyer with your documents", "Gather relevant case details", "Prepare necessary documentation"]
+        )
     # Otherwise, use FAQ first (with structure), then LLM fallback
     for key in list(FAQ.keys()) + list(KEYWORD_ALIASES.keys()):
         if key.lower() in user_msg:
@@ -150,13 +130,8 @@ async def chat(request: ChatRequest):
             if faq_answer:
                 return {"answer": faq_answer}
     
-    # If no FAQ match, try the chat engine
-    try:
-        result = answer_query(request.message)
-        if result and result.get('answer'):
-            return {"answer": result['answer']}
-    except Exception as e:
-        print(f"Chat engine error: {e}")
+    # Chat engine disabled for production deployment to save memory
+    # Simple fallback without heavy dependencies
     
     # Final fallback with structured response
     return format_structured_response(
