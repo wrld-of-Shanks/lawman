@@ -8,22 +8,20 @@ import os
 from pydantic import BaseModel
 # Use regular string instead of EmailStr to avoid dependency issues
 from typing import Optional
-# Commented out heavy dependencies for production deployment
-# from doc_parser import parse_and_chunk
-# from embed_store import add_chunks_to_db
-# from chat_engine import answer_query
+from doc_parser import parse_and_chunk
+from embed_store import add_chunks_to_db
+from chat_engine import answer_query
 import smtplib
 from email.mime.text import MIMEText
 import sqlite3
 import re
-# OpenAI temporarily disabled to reduce memory usage
-# from openai import OpenAI
+from openai import OpenAI
 from auth_mongo import auth_router
 from mongodb_config import connect_to_mongo, close_mongo_connection, create_indexes, get_legal_acts_collection, get_sync_database
 
-# Initialize OpenAI client (disabled for memory optimization)
-# client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-# MODEL_NAME = "gpt-3.5-turbo"
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+MODEL_NAME = "gpt-3.5-turbo"
 
 app = FastAPI()
 
