@@ -131,19 +131,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
   };
 
-  const handleVerifyOTP = async () => {
-    try {
-      await axios.post(`${API_BASE_URL}/verify-email`, {
-        email: formData.email,
-        otp: otp,
-      });
-
-      setSuccess('Email verified successfully! You can now login.');
-      setOtpDialogOpen(false);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid OTP');
-    }
-  };
+  // OTP verification removed for development - auto-verified on backend
 
   const handleForgotPassword = async () => {
     try {
