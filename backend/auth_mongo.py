@@ -256,7 +256,7 @@ async def verify_email(otp_data: OTPVerify):
 async def login(user_data: UserLogin):
     user = await get_user_by_email(user_data.email)
     
-    if not user or not verify_password(user_data.password, user["password"]):
+    if not user or not verify_password(user_data.password, user["password_hash"]):
         await log_auth_event(TraceEvents.AUTH_LOGIN, user_data.email, False, {"reason": "invalid_credentials"})
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

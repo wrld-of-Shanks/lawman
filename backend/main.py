@@ -202,7 +202,8 @@ async def upload_file(file: UploadFile = File(...)):
         chunks = parse_and_chunk(temp_file_path)
         
         # Add chunks to the database
-        add_chunks_to_db(chunks, file.filename)
+        metadata = [{"source": file.filename, "chunk_index": i} for i in range(len(chunks))]
+        add_chunks_to_db(chunks, metadata)
         
         # Clean up the temporary file
         os.remove(temp_file_path)
