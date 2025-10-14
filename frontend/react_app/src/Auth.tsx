@@ -44,6 +44,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [resetEmail, setResetEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -115,14 +117,26 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         setSuccess('Login successful!');
       } else {
         // Register
-        await axios.post(`${API_BASE_URL}/register`, {
+        const response = await axios.post(`${API_BASE_URL}/register`, {
           email: formData.email,
           password: formData.password,
           full_name: formData.fullName,
         });
 
-        setSuccess('Registration successful! Please check your email for verification code.');
-        setOtpDialogOpen(true);
+        // Check if registration was successful
+        if (response.data.message && response.data.message.includes('successful')) {
+          // Check if email was actually sent or if it's development mode
+          if (response.data.message.includes('check your email')) {
+            setSuccess('Registration successful! Please check your email for verification code.');
+            setOtpDialogOpen(true); // Show OTP dialog for production mode
+          } else {
+            setSuccess('Registration successful! You can now login with your credentials.');
+            // Don't show OTP dialog in development mode since backend auto-verifies
+          }
+        } else {
+          setSuccess('Registration successful! Please check your email for verification code.');
+          setOtpDialogOpen(true);
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'An error occurred');
@@ -135,19 +149,40 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
   const handleForgotPassword = async () => {
     try {
-      await axios.post(`${API_BASE_URL}/forgot-password`, {
+      setResetLoading(true);
+      setError('');
+      setSuccess('');
+      const response = await axios.post(`${API_BASE_URL}/forgot-password`, {
         email: resetEmail,
       });
 
-      setSuccess('If the email exists, a reset code has been sent.');
-      setForgotPasswordOpen(false);
+      // Check if OTP is provided in response (development mode)
+      if (response.data.message && response.data.message.includes('OTP:')) {
+        setSuccess(response.data.message);
+        setForgotPasswordOpen(false);
+        // Extract OTP from message for development testing
+        const otpMatch = response.data.message.match(/OTP:\s*(\d+)/);
+        if (otpMatch) {
+          setOtp(otpMatch[1]);
+          setOtpDialogOpen(true);
+        }
+      } else {
+        setSuccess('If the email exists, a reset code has been sent to your email.');
+        setForgotPasswordOpen(false);
+        setOtpDialogOpen(true); // Show OTP dialog for password reset flow
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'An error occurred');
+    } finally {
+      setResetLoading(false);
     }
   };
 
   const handleResetPassword = async () => {
     try {
+      setOtpLoading(true);
+      setError('');
+      setSuccess('');
       await axios.post(`${API_BASE_URL}/reset-password`, {
         email: resetEmail,
         otp: otp,
@@ -158,6 +193,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       setOtpDialogOpen(false);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid OTP');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -542,15 +579,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 backgroundColor: '#FFC107',
               },
             }}
+            disabled={!resetEmail || resetLoading}
+            startIcon={resetLoading ? <CircularProgress size={18} sx={{ color: '#000' }} /> : undefined}
           >
             Send Reset Code
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* OTP Verification Dialog */}
-      <Dialog 
-        open={otpDialogOpen} 
+      {/* OTP Verification Dialog - Used only for password reset, not registration */}
+      <Dialog
+        open={otpDialogOpen}
         onClose={() => setOtpDialogOpen(false)}
         PaperProps={{
           sx: {
@@ -562,6 +601,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       >
         <DialogTitle sx={{ color: '#FFD700' }}>Enter Verification Code</DialogTitle>
         <DialogContent>
+          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}>
+            Enter the 6-digit code sent to your email for password reset.
+          </Typography>
           <TextField
             autoFocus
             margin="dense"
@@ -569,7 +611,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             fullWidth
             variant="outlined"
             value={otp}
-            onChange={(e) => setOtp(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+              setOtp(v);
+            }}
+            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 6 }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -622,14 +668,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           />
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => setOtpDialogOpen(false)}
             sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleResetPassword} 
+          <Button
+            onClick={handleResetPassword}
             variant="contained"
             sx={{
               backgroundColor: '#FFD700',
@@ -638,6 +684,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 backgroundColor: '#FFC107',
               },
             }}
+            disabled={otpLoading || otp.length !== 6 || newPassword.length < 6 || !resetEmail}
+            startIcon={otpLoading ? <CircularProgress size={18} sx={{ color: '#000' }} /> : undefined}
           >
             Reset Password
           </Button>

@@ -17,7 +17,21 @@ function App() {
   const [solutionsProblem, setSolutionsProblem] = useState('');
   const [solutionsResponse, setSolutionsResponse] = useState('');
   const [solutionsLoading, setSolutionsLoading] = useState(false);
-  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెলుగు', 'മലയാളം'];
+  
+  // Jurisdiction and Subscription State
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>(() => localStorage.getItem('specter_jurisdiction') || '');
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free'); // free, lite, specter
+  const [usageStats, setUsageStats] = useState({ questions: 0, solutions: 0, uploads: 0 });
+  const [showJurisdictionDialog, setShowJurisdictionDialog] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెలుగు', 'മലയാളം'];
+  const jurisdictions = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Singapore', 'Other'];
+  
+  const subscriptionLimits = {
+    free: { questions: 10, solutions: 3, uploads: 0 },
+    lite: { questions: 50, solutions: 25, uploads: 3 },
+    specter: { questions: -1, solutions: -1, uploads: -1 } // -1 means unlimited
+  };
   const [selectedLanguage, setSelectedLanguage] = useState<string>(() => localStorage.getItem('specter_lang') || 'English');
 
   // Authentication state
@@ -27,6 +41,65 @@ function App() {
   const handleLogin = (userData: any) => {
     setUser(userData);
     setIsAuthenticated(true);
+    // Load user subscription and usage data
+    loadUserSubscriptionData(userData.id);
+  };
+  
+  const loadUserSubscriptionData = async (userId: string) => {
+    try {
+      // Fetch subscription data from backend
+      const response = await fetch(`${config.API_BASE_URL}/api/subscription-status/${userId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionTier(data.plan);
+        
+        // Load usage stats from local storage (for now)
+        const savedUsage = JSON.parse(localStorage.getItem(`specter_usage_${userId}`) || '{"questions": 0, "solutions": 0, "uploads": 0}');
+        setUsageStats(savedUsage);
+      } else {
+        // Fallback to local storage
+        const savedTier = localStorage.getItem(`specter_subscription_${userId}`) || 'free';
+        const savedUsage = JSON.parse(localStorage.getItem(`specter_usage_${userId}`) || '{"questions": 0, "solutions": 0, "uploads": 0}');
+        setSubscriptionTier(savedTier);
+        setUsageStats(savedUsage);
+      }
+    } catch (error) {
+      console.error('Error loading subscription data:', error);
+      // Fallback to local storage
+      const savedTier = localStorage.getItem(`specter_subscription_${userId}`) || 'free';
+      const savedUsage = JSON.parse(localStorage.getItem(`specter_usage_${userId}`) || '{"questions": 0, "solutions": 0, "uploads": 0}');
+      setSubscriptionTier(savedTier);
+      setUsageStats(savedUsage);
+    }
+  };
+  
+  const checkUsageLimit = (type: 'questions' | 'solutions' | 'uploads'): boolean => {
+    const limits = subscriptionLimits[subscriptionTier as keyof typeof subscriptionLimits];
+    const currentUsage = usageStats[type];
+    
+    if (limits[type] === -1) return true; // Unlimited
+    return currentUsage < limits[type];
+  };
+  
+  const incrementUsage = (type: 'questions' | 'solutions' | 'uploads') => {
+    const newStats = { ...usageStats, [type]: usageStats[type] + 1 };
+    setUsageStats(newStats);
+    if (user?.id) {
+      localStorage.setItem(`specter_usage_${user.id}`, JSON.stringify(newStats));
+    }
+  };
+  
+  const detectQuestionType = (message: string): 'general' | 'personal' => {
+    const personalIndicators = [
+      'my case', 'i have', 'i am facing', 'my problem', 'my situation',
+      'help me with', 'what should i do', 'my husband', 'my wife', 'my employer',
+      'i was', 'i got', 'i received', 'happened to me', 'my landlord',
+      'my tenant', 'i want to file', 'i need to sue', 'my rights in this case'
+    ];
+    
+    const lowerMessage = message.toLowerCase();
+    return personalIndicators.some(indicator => lowerMessage.includes(indicator)) ? 'personal' : 'general';
   };
 
   // Check for existing authentication on app load
@@ -120,18 +193,43 @@ function App() {
     e.preventDefault();
     if (!chatMessage.trim()) return;
     
+    // Check jurisdiction
+    if (!selectedJurisdiction) {
+      setShowJurisdictionDialog(true);
+      return;
+    }
+    
+    const questionType = detectQuestionType(chatMessage);
+    const usageType = questionType === 'personal' ? 'solutions' : 'questions';
+    
+    // Check usage limits
+    if (!checkUsageLimit(usageType)) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      const prefixed = selectedLanguage === 'English' ? chatMessage : `Respond in ${selectedLanguage}. ${chatMessage}`;
+      let prefixed = selectedLanguage === 'English' ? chatMessage : `Respond in ${selectedLanguage}. ${chatMessage}`;
+      prefixed += ` [Jurisdiction: ${selectedJurisdiction}]`;
+      
       const response = await fetch(`${config.API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prefixed })
       });
       const data = await response.json();
-      setChatResponse(data.answer);
+      
+      // Add solution indicator for personal legal issues
+      let responseText = data.answer;
+      if (questionType === 'personal') {
+        responseText = `🔍 **Legal Solution Provided**\n\n${responseText}\n\n---\n*This is a personalized legal solution based on ${selectedJurisdiction} law. Consult a lawyer for specific advice.*`;
+      }
+      
+      setChatResponse(responseText);
+      incrementUsage(usageType);
     } catch (error) {
-             setChatResponse('Error connecting to SPECTER. Please try again.');
+      setChatResponse('Error connecting to SPECTER. Please try again.');
     }
     setIsLoading(false);
   };
@@ -225,23 +323,36 @@ function App() {
               className="upload-btn"
               onClick={async () => {
                 if (!selectedFile) {
-                  setUploadStatus("Select a file first.");
+                  setUploadStatus('Please select a file first');
                   return;
                 }
+
+                // Check jurisdiction
+                if (!selectedJurisdiction) {
+                  setShowJurisdictionDialog(true);
+                  return;
+                }
+
+                // Check usage limits
+                if (!checkUsageLimit('uploads')) {
+                  setShowUpgradeDialog(true);
+                  return;
+                }
+
+                setUploadStatus('Uploading...');
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('jurisdiction', selectedJurisdiction);
+
                 try {
-                  const form = new FormData();
-                  form.append('file', selectedFile);
-                  const resp = await fetch(`${config.API_BASE_URL}/upload`, {
+                  const response = await fetch(`${config.API_BASE_URL}/upload`, {
                     method: 'POST',
-                    body: form
+                    body: formData
                   });
-                  const data = await resp.json();
-                  if (resp.ok) {
-                    setUploadStatus(`Uploaded: ${data.filename}`);
-                  } else {
-                    setUploadStatus(`Upload failed: ${data.message || 'server error'}`);
-                  }
-                } catch (e) {
+                  const data = await response.json();
+                  setUploadStatus(`Upload successful: ${data.message}`);
+                  incrementUsage('uploads');
+                } catch (error) {
                   setUploadStatus('Upload failed. Check backend is running.');
                 }
               }}
@@ -327,9 +438,16 @@ function App() {
               </button>
               
               
-              <button onClick={() => setCurrentView('solutions')} className="feature-btn">
-                <span className="feature-icon">⚖️</span>
-                <span className="feature-text">{t('legal_solutions')}</span>
+              <button onClick={() => setCurrentView('chat')} className="feature-btn specter-btn" style={{
+                background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                color: '#000',
+                fontWeight: 'bold',
+                boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)',
+                transform: 'scale(1.05)',
+                border: '2px solid #FFD700'
+              }}>
+                <span className="feature-icon">🤖</span>
+                <span className="feature-text">SPECTER</span>
               </button>
               
               <button onClick={() => setServicesOpen(true)} className="feature-btn">
@@ -369,19 +487,19 @@ function App() {
          </div>
         
         <div className="nav-right">
-          <div className="lang-selector">
-            <button className="lang-button" onClick={() => setShowLangs(v => !v)}>
-              {selectedLanguage}
-            </button>
-            {showLangs && (
-              <div className="lang-dropdown">
-                {languages.map((lang) => (
-                  <div key={lang} className={`lang-item ${lang === selectedLanguage ? 'active' : ''}`} onClick={() => { setSelectedLanguage(lang); localStorage.setItem('specter_lang', lang); setShowLangs(false); }}>
-                    {lang}
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="header-right">
+          {selectedJurisdiction && (
+            <div className="jurisdiction-indicator" style={{ 
+              marginRight: '10px', 
+              padding: '4px 8px', 
+              background: 'rgba(255,215,0,0.2)', 
+              borderRadius: '4px',
+              fontSize: '12px',
+              color: '#FFD700'
+            }}>
+              📍 {selectedJurisdiction}
+            </div>
+          )}
           </div>
           {isAuthenticated && (
             <button className="status-button" onClick={() => setCurrentView('dashboard')}>
@@ -416,6 +534,27 @@ function App() {
       </nav>
       {sidebarOpen && <div className="backdrop" onClick={() => setSidebarOpen(false)} />}
       <LegalServicesPanel isOpen={servicesOpen} onClose={() => setServicesOpen(false)} />
+      <JurisdictionDialog 
+        isOpen={showJurisdictionDialog} 
+        onClose={() => setShowJurisdictionDialog(false)}
+        onSelect={(jurisdiction) => {
+          setSelectedJurisdiction(jurisdiction);
+          localStorage.setItem('specter_jurisdiction', jurisdiction);
+          setShowJurisdictionDialog(false);
+        }}
+        jurisdictions={jurisdictions}
+      />
+      <UpgradeDialog 
+        isOpen={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        currentTier={subscriptionTier}
+        usageStats={usageStats}
+        limits={subscriptionLimits}
+        user={user}
+        setSubscriptionTier={setSubscriptionTier}
+        setUsageStats={setUsageStats}
+        loadUserSubscriptionData={loadUserSubscriptionData}
+      />
 
       {/* Main Content */}
       <main className="main-area">
@@ -425,11 +564,217 @@ function App() {
       {/* Bottom Left Scroll Indicator */}
       <div className="scroll-indicator">
         <span>scroll down</span>
-        <div className="scroll-line"></div>
+        <div className="scroll-arrow">↓</div>
       </div>
 
-      {/* Voice Assistant - Disabled for now */}
-      {/* <VoiceAssistant /> */}
+      {/* Footer with Policy Links */}
+      <footer style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'rgba(0, 0, 0, 0.9)',
+        padding: '10px 20px',
+        fontSize: '12px',
+        color: '#888',
+        textAlign: 'center',
+        borderTop: '1px solid #333',
+        zIndex: 1000
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          <a href="/privacy-policy.html" target="_blank" style={{ color: '#FFD700', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/terms-conditions.html" target="_blank" style={{ color: '#FFD700', textDecoration: 'none' }}>Terms & Conditions</a>
+          <a href="/refund-policy.html" target="_blank" style={{ color: '#FFD700', textDecoration: 'none' }}>Refund Policy</a>
+          <a href="/contact.html" target="_blank" style={{ color: '#FFD700', textDecoration: 'none' }}>Contact Us</a>
+          <a href="/shipping-policy.html" target="_blank" style={{ color: '#FFD700', textDecoration: 'none' }}>Shipping Policy</a>
+        </div>
+        <div style={{ marginTop: '5px', fontSize: '10px' }}>
+          © 2024 SPECTER Legal Assistant. All rights reserved. | Powered by AI Technology
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// Jurisdiction Selection Dialog
+function JurisdictionDialog({ isOpen, onClose, onSelect, jurisdictions }: any) {
+  if (!isOpen) return null;
+  return (
+    <div className="backdrop" onClick={onClose}>
+      <div className="bot-interface" style={{ maxWidth: 500, margin: '100px auto' }} onClick={(e) => e.stopPropagation()}>
+        <h2>Select Your Jurisdiction</h2>
+        <p>Which country's legal system should I apply?</p>
+        <div style={{ display: 'grid', gap: '10px', marginTop: '20px' }}>
+          {jurisdictions.map((jurisdiction: string) => (
+            <button 
+              key={jurisdiction}
+              className="chat-btn" 
+              onClick={() => onSelect(jurisdiction)}
+              style={{ padding: '12px', textAlign: 'left' }}
+            >
+              {jurisdiction}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Upgrade Dialog with Razorpay Integration
+function UpgradeDialog({ isOpen, onClose, currentTier, usageStats, limits, user, setSubscriptionTier, setUsageStats, loadUserSubscriptionData }: any) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  if (!isOpen) return null;
+
+  const handlePayment = async (plan: string) => {
+    if (!user) {
+      alert('Please login to upgrade your subscription');
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      // Create payment order
+      const response = await fetch(`${config.API_BASE_URL}/api/create-payment-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: plan,
+          user_id: user.id,
+          user_email: user.email,
+          user_name: user.full_name || user.email
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to create payment order');
+      }
+      
+      const { order_id, amount, currency, key_id, plan_name, description } = result.data;
+      
+      // Initialize Razorpay
+      const options = {
+        key: key_id,
+        amount: amount,
+        currency: currency,
+        name: 'SPECTER Legal Assistant',
+        description: description,
+        order_id: order_id,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            const verifyResponse = await fetch(`${config.API_BASE_URL}/api/verify-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                user_id: user.id
+              })
+            });
+            
+            const verifyResult = await verifyResponse.json();
+            
+            if (verifyResult.success) {
+              alert('Payment successful! Your subscription has been upgraded.');
+              setSubscriptionTier(plan);
+              setUsageStats({ questions: 0, solutions: 0, uploads: 0 }); // Reset usage
+              onClose();
+              // Reload subscription data
+              loadUserSubscriptionData(user.id);
+            } else {
+              alert('Payment verification failed. Please contact support.');
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            alert('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: user.full_name || user.email,
+          email: user.email,
+          contact: user.phone || ''
+        },
+        theme: {
+          color: '#FFD700'
+        },
+        modal: {
+          ondismiss: function() {
+            setIsProcessing(false);
+          }
+        }
+      };
+      
+      // Load Razorpay script and open payment modal
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => {
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      };
+      document.body.appendChild(script);
+      
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Failed to initiate payment. Please try again.');
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="backdrop" onClick={onClose}>
+      <div className="bot-interface" style={{ maxWidth: 600, margin: '80px auto' }} onClick={(e) => e.stopPropagation()}>
+        <h2>Upgrade Required</h2>
+        <p>You have reached your limit for this feature under your current plan.</p>
+        
+        <div style={{ margin: '20px 0', padding: '15px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+          <h3>Current Plan: {currentTier.toUpperCase()}</h3>
+          <p>Questions: {usageStats.questions}/{limits[currentTier].questions === -1 ? '∞' : limits[currentTier].questions}</p>
+          <p>Solutions: {usageStats.solutions}/{limits[currentTier].solutions === -1 ? '∞' : limits[currentTier].solutions}</p>
+          <p>Uploads: {usageStats.uploads}/{limits[currentTier].uploads === -1 ? '∞' : limits[currentTier].uploads}</p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', margin: '20px 0' }}>
+          <div style={{ padding: '15px', border: '2px solid #FFD700', borderRadius: '8px' }}>
+            <h4>Lite Plan - ₹299</h4>
+            <p>50 Questions, 25 Solutions, 3 Uploads</p>
+            <button 
+              className="chat-btn" 
+              style={{ width: '100%', marginTop: '10px' }}
+              onClick={() => handlePayment('lite')}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Upgrade to Lite'}
+            </button>
+          </div>
+          <div style={{ padding: '15px', border: '2px solid #FFD700', borderRadius: '8px', background: 'rgba(255,215,0,0.1)' }}>
+            <h4>SPECTER Plan - ₹499</h4>
+            <p>Unlimited Everything + Priority</p>
+            <button 
+              className="chat-btn" 
+              style={{ width: '100%', marginTop: '10px' }}
+              onClick={() => handlePayment('specter')}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Upgrade to SPECTER'}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <button className="back-btn" onClick={onClose} disabled={isProcessing}>Close</button>
+        </div>
+        
+        <div style={{ marginTop: '15px', fontSize: '12px', color: '#888', textAlign: 'center' }}>
+          <p>🔒 Secure payment powered by Razorpay</p>
+          <p>Supports UPI, Cards, Net Banking & Wallets</p>
+        </div>
+      </div>
     </div>
   );
 }

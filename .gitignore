@@ -1,3 +1,5 @@
+# ==================== SPECTER Legal Assistant .gitignore ====================
+
 # Python
 __pycache__/
 *.py[cod]
@@ -19,6 +21,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environments
 .env
@@ -28,61 +31,181 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+pipenv/
+poetry.lock
 
-# IDE
+# IDE and Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.classpath
+.c9revisions/
+.sublime-workspace
+.sublime-project
 
-# OS
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Node.js
+# Node.js and npm
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+.yarn-integrity
 
-# React build
+# React build artifacts
 build/
+dist/
+.next/
+out/
 
 # Logs
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
-# Database files (now using MongoDB)
+# Database files (using MongoDB now)
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 
 # Temporary files
 temp_*
 *.tmp
+*.temp
+.tmp/
 
 # Backup files
 *.bak
 *.backup
 *.save
+*~
 
-# ChromaDB
+# ChromaDB and Vector stores
 /data/processed/chroma/
+/data/processed/vector_store/
+chroma_db/
+vector_store/
 
-# Model files (if any)
+# AI Model files
 *.bin
 *.safetensors
 *.pt
 *.pth
+*.onnx
+*.h5
+models/
+checkpoints/
 
 # Deployment artifacts
 Procfile
 vercel.json
 railway.json
 render.yaml
+docker-compose.override.yml
+.dockerignore
 
-# Trace and cache directories
-trace/
+# Cache directories
 .cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+
+# Documentation builds
+docs/_build/
+site/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
 
 # Local Netlify folder
-.netlify
+.netlify/
+
+# Local development files
+test_*.py
+temp_*.txt
+debug_*.log
+local_config.py
+
+# API keys and secrets (should be in .env)
+api_keys.txt
+secrets.json
+config_local.py
+
+# Large data files
+*.csv
+*.json
+*.xml
+*.xlsx
+large_data/
+
+# System files
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*

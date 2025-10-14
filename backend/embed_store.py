@@ -25,6 +25,7 @@ embedder = SentenceTransformer("all-MiniLM-L6-v2")
 def add_chunks_to_db(chunks: List[str], metadata: List[Dict]):
     embeddings = embedder.encode(chunks).tolist()
     ids = [f"chunk_{i}_{os.urandom(4).hex()}" for i in range(len(chunks))]
+    
     collection.add(
         documents=chunks,
         embeddings=embeddings,

@@ -1,102 +1,301 @@
-# SPECTER Legal Assistant 🏛️
+# 🏛️ SPECTER Legal Assistant
 
-> **Your AI-Powered Legal Companion**
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![React 18](https://img.shields.io/badge/react-18+-61DAFB.svg)](https://reactjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-4.4+-47A248.svg)](https://www.mongodb.com/)
 
-SPECTER is a comprehensive legal assistant application that combines modern web technologies with advanced AI to provide accurate legal information, document analysis, and intelligent legal guidance.
+> **Comprehensive AI-Powered Legal Assistant for Indian Law**  
+> Providing accessible legal information, document analysis, and procedural guidance with 200+ legal topics coverage.
 
-## ✨ Features
+## 🌟 **Features**
 
-- **🤖 AI Legal Chat** - Get instant answers to legal questions with source citations
-- **📄 Document Analysis** - Upload and analyze legal documents
-- **🔐 User Authentication** - Secure JWT-based authentication system
-- **📊 User Dashboard** - Personal legal query history and statistics
-- **🌐 Multi-language Support** - Available in English, Hindi, Kannada, Tamil, Telugu, and Malayalam
-- **📱 Responsive Design** - Beautiful, modern interface that works on all devices
+### 🤖 **Intelligent Legal Assistant**
+- **Natural Language Processing**: Advanced chat interface for legal queries
+- **200+ Legal Topics**: Comprehensive coverage of all major Indian law domains
+- **Case Law References**: 50+ landmark case citations with legal precedents
+- **Step-by-Step Solutions**: Detailed procedures for 12+ common legal issues
+- **Multi-Domain Coverage**: Constitutional, Criminal, Civil, Commercial, Labour, Tax, Environmental law
 
-## 🚀 Quick Start
+### 📄 **Document Processing**
+- **Multi-Format Support**: PDF, DOCX, TXT file analysis
+- **Vector Search**: ChromaDB-powered semantic search
+- **Document Chunking**: Intelligent text segmentation for better analysis
+- **Upload Tracking**: Complete audit trail for document processing
 
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- npm or yarn
+### 🔐 **Security & Authentication**
+- **JWT-Based Auth**: Secure token-based authentication
+- **Email Verification**: OTP-based email verification system
+- **User Management**: Complete user registration and profile management
+- **Session Tracking**: Comprehensive user activity monitoring
 
-### Installation
+### 📊 **Monitoring & Analytics**
+- **Real-Time Tracing**: Complete system activity logging
+- **Performance Metrics**: API response times and usage statistics
+- **Admin Dashboard**: System health monitoring and user analytics
+- **Error Tracking**: Comprehensive error logging and debugging
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd lawman
-   ```
-
-2. **Set up the backend**
-   ```bash
-   # Install Python dependencies
-   pip install -r requirements.txt
-   
-   # Set up environment variables
-   cp backend/.env.example backend/.env
-   # Edit backend/.env with your configuration
-   
-   # Start the backend server
-   cd backend
-   python main.py
-   ```
-
-3. **Set up the frontend**
-   ```bash
-   # Install Node.js dependencies
-   cd frontend/react_app
-   npm install
-   
-   # Start the development server
-   npm start
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8002
-
-## 📁 Project Structure
-
-See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for detailed information about the project organization.
+## 🏗️ **Architecture**
 
 ```
-lawman/
-├── backend/          # FastAPI backend server
-├── frontend/         # React frontend application
-├── data/            # Legal documents and knowledge base
-├── scripts/         # Utility scripts for data processing
-└── docs/           # Documentation files
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   React Frontend│    │  FastAPI Backend│    │   MongoDB Atlas │
+│                 │    │                 │    │                 │
+│  • Material-UI  │◄──►│  • 200+ Topics  │◄──►│  • User Data    │
+│  • TypeScript   │    │  • Legal Solutions│   │  • Legal Acts   │
+│  • Auth System  │    │  • Document AI  │    │  • Audit Logs   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │              ┌─────────────────┐              │
+         └──────────────►│   ChromaDB      │◄─────────────┘
+                        │  Vector Store   │
+                        │  • Embeddings   │
+                        │  • Semantic     │
+                        │    Search       │
+                        └─────────────────┘
 ```
 
-## 🔧 Configuration
+## 🚀 **Quick Start**
 
-### Environment Variables
+### **Prerequisites**
+- Python 3.8+ 🐍
+- Node.js 16+ 📦
+- MongoDB (local or Atlas) 🍃
+- Git 📝
 
-Create a `.env` file in the `backend/` directory:
-
-```env
-# OpenAI Configuration
-OPENAI_API_KEY=your-openai-api-key
-
-# Email Service Configuration (Contact Lawyer Feature)
-LAWYER_SMTP_USER=your-email@gmail.com
-LAWYER_SMTP_PASS=your-app-password
-LAWYER_SMTP_HOST=smtp.gmail.com
-LAWYER_SMTP_PORT=587
-LAWYER_RECEIVER_EMAIL=lawyer@lawfirm.com
-
-# JWT Configuration
-JWT_SECRET_KEY=your-super-secret-jwt-key
+### **1. Clone Repository**
+```bash
+git clone https://github.com/wrld-of-Shanks/lawman.git
+cd lawman
 ```
 
-## 🎯 Usage
+### **2. Backend Setup**
+```bash
+cd backend
 
-### For Users
-1. **Register/Login** - Create an account or sign in
-2. **Ask Questions** - Use the chat interface to ask legal questions
-3. **Upload Documents** - Analyze legal documents for insights
-4. **View Dashboard** - Track your legal queries and account information
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# Start backend server
+python main.py
+```
+
+### **3. Frontend Setup**
+```bash
+cd frontend/react_app
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Set REACT_APP_API_URL=http://localhost:8002
+
+# Start development server
+npm start
+```
+
+### **4. Access Application**
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8002
+- **API Docs**: http://localhost:8002/docs
+
+## 📚 **Legal Coverage**
+
+### **🏛️ Constitutional Law (15+ Topics)**
+- Fundamental Rights & Duties
+- Directive Principles of State Policy
+- Emergency Provisions & Constitutional Amendments
+- Judicial Review & Separation of Powers
+
+### **⚖️ Criminal Law (25+ Topics)**
+- Indian Penal Code (IPC) - Complete coverage
+- Criminal Procedure Code (CrPC)
+- Evidence Act & Cyber Crimes
+- Terrorism, Narcotics & Corruption Laws
+
+### **👨‍👩‍👧‍👦 Civil & Family Law (20+ Topics)**
+- Contract Law & Tort Law
+- Property & Succession Laws
+- Marriage, Divorce & Child Custody
+- Maintenance & Adoption Laws
+
+### **🏢 Commercial Law (15+ Topics)**
+- Company Law & Partnership
+- Insolvency & Bankruptcy Code
+- Securities Law & Banking Regulation
+- Competition Law & Arbitration
+
+### **👷 Labour Law (12+ Topics)**
+- Industrial Relations & Wages
+- Social Security & Working Conditions
+- Employment Rights & Trade Unions
+- Maternity Benefits & Sexual Harassment
+
+### **💰 Tax Law (8+ Topics)**
+- Income Tax & GST
+- Customs & Central Excise
+- Service Tax & Tax Procedures
+
+### **🌍 Environmental Law (8+ Topics)**
+- Environment Protection Act
+- Pollution Control & Forest Conservation
+- Wildlife Protection & Green Tribunal
+
+### **🏛️ Administrative Law (10+ Topics)**
+- Right to Information (RTI)
+- Public Interest Litigation (PIL)
+- Ombudsman & Central Vigilance
+
+### **💻 Information Technology (8+ Topics)**
+- IT Act 2000 & Data Protection
+- Cyber Security & E-commerce Laws
+
+### **🚗 Specialized Areas (30+ Topics)**
+- Motor Vehicle Law
+- Consumer Protection
+- Real Estate (RERA)
+- Banking & Finance
+- Agricultural Law
+- Health & Medical Law
+- Media & Entertainment
+- Sports Law
+- International Law
+
+## 🔧 **API Reference**
+
+### **Authentication**
+```http
+POST /auth/register
+POST /auth/login  
+POST /auth/verify-otp
+```
+
+### **Legal Services**
+```http
+POST /chat                 # Legal query processing
+POST /legal-solution      # Detailed legal solutions
+GET  /legal-topics        # List all available topics
+POST /upload              # Document analysis
+```
+
+### **Admin & Monitoring**
+```http
+GET /admin/traces         # System activity logs
+GET /admin/stats          # Usage statistics
+GET /admin/user-activity/{user_id}  # User analytics
+```
+
+## 💡 **Usage Examples**
+
+### **Legal Query**
+```bash
+curl -X POST "http://localhost:8002/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What are fundamental rights under Indian Constitution?"}'
+```
+
+### **Detailed Legal Solution**
+```bash
+curl -X POST "http://localhost:8002/legal-solution" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "bail application procedure"}'
+```
+
+### **Document Upload**
+```bash
+curl -X POST "http://localhost:8002/upload" \
+  -F "file=@legal_document.pdf"
+```
+
+## 📊 **System Statistics**
+
+- **📖 Total Legal Topics**: 213
+- **⚖️ Detailed Legal Solutions**: 12 comprehensive procedures
+- **📚 Case Law References**: 50+ landmark cases
+- **🏛️ Law Domains Covered**: 15+ major areas
+- **🔍 Search Capabilities**: Semantic vector search
+- **📈 Response Time**: <100ms for FAQ queries
+- **🛡️ Security Features**: JWT auth + audit logging
+
+## 🚀 **Deployment**
+
+### **Production Deployment**
+- **Frontend**: Deployed on Netlify
+- **Backend**: Cloud deployment ready (Railway, Heroku, AWS)
+- **Database**: MongoDB Atlas
+- **Monitoring**: Built-in tracing and analytics
+
+### **Environment Configuration**
+```bash
+# Production Backend
+MONGODB_URL=mongodb+srv://user:pass@cluster.mongodb.net/
+DATABASE_NAME=specter_legal
+JWT_SECRET_KEY=your-production-secret
+
+# Production Frontend  
+REACT_APP_API_URL=https://your-backend-url.com
+```
+
+## 🤝 **Contributing**
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md).
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
+4. **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. **Open** a Pull Request
+
+## 📄 **Legal Disclaimer**
+
+⚠️ **Important**: SPECTER Legal Assistant provides general legal information for educational purposes only. This is **NOT** a substitute for professional legal advice. Users should consult qualified lawyers for specific legal matters and representation.
+
+## 📞 **Support**
+
+- 🐛 **Bug Reports**: [Create an Issue](https://github.com/wrld-of-Shanks/lawman/issues)
+- 💡 **Feature Requests**: [Discussions](https://github.com/wrld-of-Shanks/lawman/discussions)
+- 📧 **Contact**: [Email Support](mailto:support@specter-legal.com)
+
+## 🗺️ **Roadmap**
+
+- [ ] 🤖 Advanced AI integration with local LLMs
+- [ ] 🌐 Multi-language interface (Hindi, Tamil, Bengali)
+- [ ] 📱 Mobile application (React Native)
+- [ ] 📋 Legal document templates
+- [ ] 👩‍⚖️ Lawyer directory integration
+- [ ] 🔍 Advanced case law search engine
+- [ ] 📊 Legal analytics dashboard
+- [ ] 🎯 Specialized domain modules
+
+## 📜 **License**
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 **Acknowledgments**
+
+- **Indian Legal System** for comprehensive law coverage
+- **Open Source Community** for amazing tools and libraries
+- **Legal Professionals** for domain expertise and guidance
+
+---
+
+<div align="center">
+
+**⭐ Star this repository if you find it helpful!**
+
+[🏠 Homepage](https://specter-legal-assistant.netlify.app) • [📖 Documentation](https://github.com/wrld-of-Shanks/lawman/wiki) • [🐛 Report Bug](https://github.com/wrld-of-Shanks/lawman/issues) • [💡 Request Feature](https://github.com/wrld-of-Shanks/lawman/discussions)
+
+</div>
 
 ### For Developers
 1. **Data Ingestion** - Use scripts to process legal documents

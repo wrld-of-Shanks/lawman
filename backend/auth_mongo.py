@@ -112,14 +112,22 @@ async def create_user(user_data: UserCreate):
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
-    
+
     try:
         result = await users_collection.insert_one(user_dict)
+        print(f"User created successfully: {user_data.email}")
         return result.inserted_id
-    except DuplicateKeyError:
+    except DuplicateKeyError as e:
+        print(f"Duplicate key error for email: {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
+        )
+    except Exception as e:
+        print(f"Error creating user {user_data.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create user account"
         )
 
 async def store_otp(email: str, otp: str, otp_type: str):
@@ -163,28 +171,77 @@ async def update_user_password(email: str, new_password: str):
     )
 
 async def invalidate_user_sessions(user_id: str):
-    sessions_collection = get_user_sessions_collection()
-    await sessions_collection.delete_many({"user_id": user_id})
+    """Invalidate all sessions for a user"""
+    try:
+        sessions_collection = get_user_sessions_collection()
+        result = await sessions_collection.delete_many({"user_id": user_id})
+        print(f"Invalidated {result.deleted_count} sessions for user {user_id}")
+    except Exception as e:
+        print(f"Error invalidating sessions for user {user_id}: {str(e)}")
+        # Don't fail the password reset if session invalidation fails
 
-def send_email(to_email: str, subject: str, body: str):
+def send_otp_email(to_email: str, otp: str, otp_type: str):
+    """Send OTP via email to user"""
     smtp_user = os.getenv('LAWYER_SMTP_USER')
     smtp_pass = os.getenv('LAWYER_SMTP_PASS')
     smtp_host = os.getenv('LAWYER_SMTP_HOST', 'smtp.gmail.com')
     smtp_port = int(os.getenv('LAWYER_SMTP_PORT', '587'))
-    
+
     if not (smtp_user and smtp_pass):
-        raise Exception("Email credentials not configured")
-    
-    msg = MIMEMultipart()
-    msg['From'] = smtp_user
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
-    
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
+        # For development without email config, return the OTP
+        print(f"DEVELOPMENT MODE - OTP for {to_email}: {otp}")
+        return {"sent": False, "otp": otp, "reason": "email_not_configured"}
+
+    try:
+        # Email content based on OTP type
+        if otp_type == "email_verification":
+            subject = "SPECTER - Email Verification"
+            body = f"""
+Welcome to SPECTER Legal Assistant!
+
+Your email verification code is: {otp}
+
+This code will expire in 10 minutes.
+
+If you didn't request this verification, please ignore this email.
+
+Thank you for choosing SPECTER!
+"""
+        elif otp_type == "password_reset":
+            subject = "SPECTER - Password Reset"
+            body = f"""
+SPECTER Legal Assistant - Password Reset
+
+Your password reset code is: {otp}
+
+This code will expire in 10 minutes.
+
+If you didn't request this password reset, please ignore this email.
+
+Thank you for using SPECTER!
+"""
+        else:
+            subject = "SPECTER - Verification Code"
+            body = f"Your verification code is: {otp}\n\nThis code will expire in 10 minutes."
+
+        msg = MIMEText(body)
+        msg['From'] = smtp_user
+        msg['To'] = to_email
+        msg['Subject'] = subject
+
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+
+        print(f"OTP email sent successfully to {to_email}")
+        return {"sent": True, "message": "OTP sent successfully"}
+
+    except Exception as e:
+        print(f"Failed to send OTP email to {to_email}: {str(e)}")
+        # Fallback to console for development
+        print(f"DEVELOPMENT MODE - OTP for {to_email}: {otp}")
+        return {"sent": False, "otp": otp, "reason": "email_send_failed"}
 
 # Router and security setup
 auth_router = APIRouter()
@@ -221,25 +278,45 @@ async def get_current_admin(current_user: dict = Depends(get_current_user)):
 # Authentication endpoints
 @auth_router.post("/register", response_model=dict)
 async def register(user_data: UserCreate):
-    # Check if user already exists
-    existing_user = await get_user_by_email(user_data.email)
-    if existing_user:
+    try:
+        # Check if user already exists
+        existing_user = await get_user_by_email(user_data.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+        # Create user
+        user_id = await create_user(user_data)
+
+        # Generate and send OTP for email verification
+        otp = generate_otp()
+        await store_otp(user_data.email, otp, "email_verification")
+
+        # Send OTP email
+        email_result = send_otp_email(user_data.email, otp, "email_verification")
+
+        # For development, skip email verification automatically
+        print(f"Development mode: Skipping email verification for {user_data.email}")
+        await update_user_verification(user_data.email)
+
+        # Return appropriate message based on email sending result
+        if email_result["sent"]:
+            return {"message": "Registration successful. Please check your email for verification code."}
+        else:
+            return {"message": f"Registration successful. Email verification completed automatically for development. OTP: {email_result['otp']}"}
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as they are
+        raise
+    except Exception as e:
+        # Handle any other unexpected errors
+        print(f"Registration error: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed. Please try again."
         )
-    
-    # Create user
-    user_id = await create_user(user_data)
-    
-    # Generate and send OTP for email verification
-    otp = generate_otp()
-    await store_otp(user_data.email, otp, "email_verification")
-    
-    # For development, skip email verification automatically
-    print(f"Development mode: Skipping email verification for {user_data.email}")
-    await update_user_verification(user_data.email)
-    return {"message": "Registration successful. Email verification completed automatically for development."}
 
 @auth_router.post("/verify-email", response_model=dict)
 async def verify_email(otp_data: OTPVerify):
@@ -323,50 +400,45 @@ async def forgot_password(request: PasswordReset):
     if not user:
         # Don't reveal if email exists or not
         return {"message": "If the email exists, a reset code has been sent."}
-    
+
     # Generate and send OTP
     otp = generate_otp()
     await store_otp(request.email, otp, "password_reset")
-    
-    # Check if email configuration is available
-    smtp_user = os.getenv('LAWYER_SMTP_USER')
-    smtp_pass = os.getenv('LAWYER_SMTP_PASS')
-    
-    if smtp_user and smtp_pass:
-        try:
-            send_email(
-                request.email,
-                "SPECTER - Password Reset",
-                f"Your password reset code is: {otp}\n\nThis code will expire in 10 minutes."
-            )
-            print(f"Password reset OTP sent to {request.email}: {otp}")
-            return {"message": "If the email exists, a reset code has been sent."}
-        except Exception as e:
-            print(f"Password reset email failed: {e}")
-            # For development, show the OTP in console
-            print(f"DEVELOPMENT MODE - Password reset OTP for {request.email}: {otp}")
-            return {"message": f"Email sending failed. For development, use OTP: {otp}"}
+
+    # Send OTP email
+    email_result = send_otp_email(request.email, otp, "password_reset")
+
+    if email_result["sent"]:
+        return {"message": "If the email exists, a reset code has been sent."}
     else:
-        # For development without email config, show OTP directly
-        print(f"DEVELOPMENT MODE - Password reset OTP for {request.email}: {otp}")
-        return {"message": f"Email not configured. For development, use OTP: {otp}"}
+        # For development, show the OTP
+        return {"message": f"Email not configured. For development, use OTP: {email_result['otp']}"}
 
 @auth_router.post("/reset-password", response_model=dict)
 async def reset_password(request: PasswordResetConfirm):
-    if await verify_otp(request.email, request.otp, "password_reset"):
-        # Update password
-        await update_user_password(request.email, request.new_password)
-        
-        # Invalidate all sessions for this user
-        user = await get_user_by_email(request.email)
-        if user:
-            await invalidate_user_sessions(str(user["_id"]))
-        
-        return {"message": "Password reset successfully"}
-    else:
+    try:
+        if await verify_otp(request.email, request.otp, "password_reset"):
+            # Update password
+            await update_user_password(request.email, request.new_password)
+
+            # Invalidate all sessions for this user
+            user = await get_user_by_email(request.email)
+            if user:
+                await invalidate_user_sessions(str(user["_id"]))
+
+            return {"message": "Password reset successfully"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired OTP"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Password reset error: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OTP"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password reset failed. Please try again."
         )
 
 @auth_router.post("/logout", response_model=dict)
