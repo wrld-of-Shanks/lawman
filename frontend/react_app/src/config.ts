@@ -7,4 +7,8 @@ const config = {
   TRANSLATE_API_URL: process.env.REACT_APP_TRANSLATE_URL || 'http://localhost:8000',
 };
 
+// Debug logging
+console.log('API_BASE_URL:', config.API_BASE_URL);
+console.log('Environment:', process.env.NODE_ENV);
+
 export default config;
