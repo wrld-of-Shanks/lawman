@@ -537,7 +537,7 @@ function App() {
       <JurisdictionDialog 
         isOpen={showJurisdictionDialog} 
         onClose={() => setShowJurisdictionDialog(false)}
-        onSelect={(jurisdiction) => {
+        onSelect={(jurisdiction: string) => {
           setSelectedJurisdiction(jurisdiction);
           localStorage.setItem('specter_jurisdiction', jurisdiction);
           setShowJurisdictionDialog(false);
