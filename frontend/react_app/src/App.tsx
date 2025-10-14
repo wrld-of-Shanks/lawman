@@ -10,7 +10,6 @@ function App() {
   const [chatResponse, setChatResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showLangs, setShowLangs] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>("");
@@ -24,15 +23,14 @@ function App() {
   const [usageStats, setUsageStats] = useState({ questions: 0, solutions: 0, uploads: 0 });
   const [showJurisdictionDialog, setShowJurisdictionDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెలుగు', 'മലയാളം'];
   const jurisdictions = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Singapore', 'Other'];
+  const selectedLanguage = 'English'; // Default to English for now
   
   const subscriptionLimits = {
     free: { questions: 10, solutions: 3, uploads: 0 },
     lite: { questions: 50, solutions: 25, uploads: 3 },
     specter: { questions: -1, solutions: -1, uploads: -1 } // -1 means unlimited
   };
-  const [selectedLanguage, setSelectedLanguage] = useState<string>(() => localStorage.getItem('specter_lang') || 'English');
 
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -654,7 +652,7 @@ function UpgradeDialog({ isOpen, onClose, currentTier, usageStats, limits, user,
         throw new Error(result.message || 'Failed to create payment order');
       }
       
-      const { order_id, amount, currency, key_id, plan_name, description } = result.data;
+      const { order_id, amount, currency, key_id, description } = result.data;
       
       // Initialize Razorpay
       const options = {
