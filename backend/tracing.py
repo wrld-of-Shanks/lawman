@@ -19,7 +19,7 @@ class TracingSystem:
         
     async def initialize(self):
         """Initialize MongoDB connection for tracing"""
-        mongodb_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+        mongodb_url = os.getenv("MONGODB_URL") or os.getenv("MONGO_URL") or "mongodb://localhost:27017"
         database_name = os.getenv("DATABASE_NAME", "specter_legal")
         
         self.client = AsyncIOMotorClient(mongodb_url)
