@@ -22,7 +22,7 @@ sentence-transformers==2.2.2
 chromadb==0.4.22
 
 # Indian Legal NLP - Updated for compatibility
-spacy==3.7.2
+spacy==3.6.1
 
 # HTTP Requests
 requests==2.31.0
