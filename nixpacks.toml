@@ -2,10 +2,10 @@
 WORKDIR = "backend"
 
 [phases.setup]
-nixPkgs = ["python39"]
+nixPkgs = ["python39", "python39Packages.pip", "python39Packages.virtualenv"]
 
 [phases.install]
-cmds = ["cd backend && python -c 'import sys; print(sys.path)'", "cd backend && python -m pip install --user --upgrade pip", "cd backend && python -m pip install --user -r requirements.txt"]
+cmds = ["cd backend && python -m venv venv", "cd backend && ./venv/bin/pip install --upgrade pip", "cd backend && ./venv/bin/pip install -r requirements.txt"]
 
 [start]
-cmd = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+cmd = "cd backend && ./venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
