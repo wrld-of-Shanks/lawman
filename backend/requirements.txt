@@ -21,9 +21,6 @@ python-docx==1.1.0
 sentence-transformers==2.2.2
 chromadb==0.4.22
 
-# Indian Legal NLP - Updated for compatibility
-spacy==3.4.4
-
 # HTTP Requests
 requests==2.31.0
 
