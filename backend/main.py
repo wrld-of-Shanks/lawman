@@ -2,31 +2,56 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, Request, UploadFile, File, Query
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from pydantic import BaseModel
-# Use regular string instead of EmailStr to avoid dependency issues
 from typing import Optional
+
+# Simplified imports for debugging
 try:
     from openai import OpenAI
 except ImportError:
     OpenAI = None
-from doc_parser import parse_and_chunk
-from embed_store import add_chunks_to_db
-from chat_engine import answer_query
-import smtplib
-from email.mime.text import MIMEText
-from tracing import tracing, TraceEvents, log_system_event, log_chat_event
-from legal_solutions import get_legal_solution, format_legal_solution, TOPIC_TO_SOLUTION
-from comprehensive_legal_db import COMPREHENSIVE_LEGAL_FAQ, SPECIALIZED_LEGAL_AREAS, get_comprehensive_legal_info
+
+# Core modules only
 from auth_mongo import auth_router
-from mongodb_config import connect_to_mongo, close_mongo_connection, create_indexes, get_users_collection, get_legal_acts_collection
-from payment_razorpay import (
-    PaymentRequest, PaymentVerification, SubscriptionStatus,
-    create_payment_order, verify_payment_signature, process_successful_payment,
-    get_subscription_limits, is_subscription_active
-)
+from mongodb_config import connect_to_mongo, close_mongo_connection, create_indexes
+
+# Optional imports with fallbacks
+try:
+    from tracing import tracing, TraceEvents, log_system_event, log_chat_event
+except ImportError:
+    # Create dummy tracing objects if import fails
+    class TraceEvents:
+        SYSTEM_START = "system_start"
+        CHAT_MESSAGE = "chat_message"
+    
+    class DummyTracing:
+        async def initialize(self): pass
+        async def log_trace(self, *args, **kwargs): pass
+    
+    tracing = DummyTracing()
+    log_system_event = lambda *args, **kwargs: None
+    log_chat_event = lambda *args, **kwargs: None
+
+# Simplified payment imports
+try:
+    from payment_razorpay import PaymentRequest, PaymentVerification, SubscriptionStatus
+except ImportError:
+    # Create dummy payment classes if import fails
+    class PaymentRequest(BaseModel):
+        amount: int
+        currency: str = "INR"
+    
+    class PaymentVerification(BaseModel):
+        razorpay_payment_id: str
+        razorpay_order_id: str
+        razorpay_signature: str
+    
+    class SubscriptionStatus(BaseModel):
+        user_id: str
+        subscription_tier: str
+        expires_at: Optional[str] = None
 import uuid
 import time
 import re
@@ -90,64 +115,36 @@ async def shutdown_event():
 # Include auth router
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 
-# Include legal analysis router
-from legal_api import legal_router
-app.include_router(legal_router, prefix="/legal", tags=["legal-analysis"])
+# Simplified API endpoints for debugging
+@app.get("/")
+async def root():
+    return {"message": "SPECTER Legal Assistant API", "status": "running"}
 
-# Include legal solutions router
-from legal_solutions_flow import solutions_router
-app.include_router(solutions_router, prefix="/solutions", tags=["legal-solutions"])
+@app.get("/test")
+async def test():
+    return {"message": "Test endpoint working"}
 
-# Include document generator router
-from document_generator import generator_router
-app.include_router(generator_router, prefix="/generate", tags=["document-generator"])
+# Temporarily comment out complex routers for debugging
+# from legal_api import legal_router
+# app.include_router(legal_router, prefix="/legal", tags=["legal-analysis"])
 
-# Request tracing middleware
-@app.middleware("http")
-async def trace_requests(request: Request, call_next):
-    start_time = time.time()
-    request_id = str(uuid.uuid4())
-    
-    # Get user info from token if available
-    user_id = None
-    try:
-        auth_header = request.headers.get("authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            # Extract user from token (simplified)
-            user_id = "authenticated_user"  # Would decode JWT in production
-    except:
-        pass
-    
-    response = await call_next(request)
-    
-    process_time = time.time() - start_time
-    
-    # Log request trace
-    await tracing.log_trace(
-        "http.request",
-        {
-            "method": request.method,
-            "path": str(request.url.path),
-            "status_code": response.status_code,
-            "process_time_ms": round(process_time * 1000, 2),
-            "query_params": dict(request.query_params),
-        },
-        user_id=user_id,
-        request_id=request_id,
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent")
-    )
-    
-    return response
+# from legal_solutions_flow import solutions_router
+# app.include_router(solutions_router, prefix="/solutions", tags=["legal-solutions"])
 
-# Add CORS middleware
+# from document_generator import generator_router
+# app.include_router(generator_router, prefix="/generate", tags=["document-generator"])
+
+# Temporarily comment out complex middleware for debugging
+# @app.middleware("http")
+# async def trace_requests(request: Request, call_next):
+#     # Simplified middleware for debugging
+#     response = await call_next(request)
+#     return response
+
+# Add CORS middleware - simplified
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Local development
-        "https://specter-legal-assistant.netlify.app",  # Production frontend
-        "https://*.netlify.app"  # Allow all Netlify preview deployments
-    ],
+    allow_origins=["*"],  # Allow all origins for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
