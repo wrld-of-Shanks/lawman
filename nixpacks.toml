@@ -2,10 +2,10 @@
 WORKDIR = "backend"
 
 [phases.setup]
-nixPkgs = ["python39", "gcc"]
+nixPkgs = ["python39"]
 
 [phases.install]
-cmds = ["cd backend && python -m ensurepip --upgrade", "cd backend && python -m pip install --upgrade pip", "cd backend && pip install -r requirements.txt"]
+cmds = ["cd backend && python -c 'import sys; print(sys.path)'", "cd backend && python -m pip install --user --upgrade pip", "cd backend && python -m pip install --user -r requirements.txt"]
 
 [start]
 cmd = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
