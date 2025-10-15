@@ -2,10 +2,10 @@
 WORKDIR = "backend"
 
 [phases.setup]
-nixPkgs = ["python39", "python39Packages.virtualenv"]
+nixPkgs = ["python39"]
 
 [phases.install]
-cmds = ["cd backend && python -m venv venv --clear", "cd backend && ./venv/bin/pip install --upgrade pip", "cd backend && ./venv/bin/pip install --no-cache-dir -r requirements.txt"]
+cmds = ["cd backend && python -m venv venv", "cd backend && ./venv/bin/pip install --upgrade pip", "cd backend && ./venv/bin/pip install --no-deps --no-cache-dir fastapi uvicorn python-dotenv motor pymongo python-jose passlib python-multipart", "cd backend && ./venv/bin/pip install --no-deps --no-cache-dir PyMuPDF python-docx requests razorpay secure-smtplib pytest pytest-asyncio gunicorn structlog", "cd backend && ./venv/bin/pip install --no-deps --no-cache-dir sentence-transformers chromadb spacy"]
 
 [start]
 cmd = "cd backend && ./venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
