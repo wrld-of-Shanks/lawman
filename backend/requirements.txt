@@ -23,7 +23,7 @@ sentence-transformers==2.2.2
 chromadb==0.4.18
 
 # Indian Legal NLP
-opennyai>=0.1.0
+opennyai==0.0.13
 
 # HTTP Requests
 requests==2.31.0
