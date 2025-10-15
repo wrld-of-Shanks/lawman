@@ -1,6 +1,7 @@
 // API Configuration
 const config = {
   // Use environment variable if available, otherwise default to localhost for development
+  // Updated to use Render backend deployment
   API_BASE_URL: process.env.REACT_APP_API_URL || 'https://specter-backend1.onrender.com',
   
   // For translation service (if needed)
