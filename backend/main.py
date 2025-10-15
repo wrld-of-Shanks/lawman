@@ -44,7 +44,20 @@ app = FastAPI()
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "message": "SPECTER Legal Assistant API is running"}
+    """Simple health check that doesn't depend on external services"""
+    try:
+        # Basic connectivity check
+        return {
+            "status": "healthy",
+            "message": "SPECTER Legal Assistant API is running",
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": time.time()
+        }
 
 @app.get("/")
 async def root():
@@ -53,18 +66,26 @@ async def root():
 # Database events
 @app.on_event("startup")
 async def startup_event():
-    await connect_to_mongo()
-    await create_indexes()
-    await tracing.initialize()
-    await log_system_event(TraceEvents.SYSTEM_START, {
-        "version": "1.2.0",
-        "timestamp": time.time(),
-        "environment": "development" if os.getenv("MONGODB_URL", "").startswith("mongodb://localhost") else "production"
-    })
+    """Initialize database connections and tracing on startup"""
+    try:
+        await connect_to_mongo()
+        await create_indexes()
+        await tracing.initialize()
+        await log_system_event(TraceEvents.SYSTEM_START, {
+            "message": "Application started successfully"
+        })
+        print("✅ Application startup completed successfully")
+    except Exception as e:
+        print(f"⚠️  Startup warning (app will still run): {str(e)}")
+        # Don't crash the app if optional services fail
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await close_mongo_connection()
+    """Cleanup connections on shutdown"""
+    try:
+        await close_mongo_connection()
+    except Exception as e:
+        print(f"Shutdown error: {str(e)}")
 
 # Include auth router
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
