@@ -112,13 +112,21 @@ body {
   gap: 3px; 
   width: 32px; 
   height: 24px; 
-  background: transparent; 
-  border: 1px solid #222; 
+  background: rgba(0,0,0,0.4); 
+  border: 2px solid #fbbf24; 
   border-radius: 4px; 
   padding: 3px; 
   cursor: pointer; 
+  transition: all 0.3s ease;
 }
-.hamburger span { display: block; height: 2px; width: 100%; background: #fbbf24; border-radius: 2px; }
+.hamburger:hover { 
+  background: #fbbf24; 
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+.hamburger span { display: block; height: 2px; width: 100%; background: #fbbf24; border-radius: 2px; transition: all 0.3s ease; }
+.hamburger:hover span { background: #000; }
 
 /* Mobile Hamburger Adjustments */
 @media (max-width: 480px) {
@@ -139,7 +147,7 @@ body {
   width: 260px; 
   background: #0b0b0b; 
   border-right: 1px solid #222; 
-  padding: 24px 16px; 
+  padding: 0; 
   transform: translateX(-100%); 
   transition: transform 0.3s ease; 
   z-index: 90; 
@@ -147,8 +155,24 @@ body {
   flex-direction: column; 
   align-items: flex-start; 
 }
-.side-nav ul { list-style: none; display: flex; flex-direction: column; gap: 24px; width: 100%; }
-.side-nav li { 
+
+.sidebar-main {
+  flex: 1;
+  width: 100%;
+  padding: 24px 16px;
+}
+
+.sidebar-nav-links { 
+  list-style: none; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 24px; 
+  width: 100%; 
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-nav-links li { 
   font-size: 16px; 
   font-weight: 400; 
   color: #fff; 
@@ -159,21 +183,41 @@ body {
   padding: 8px 16px;
   border-radius: 6px;
 }
-.side-nav li:hover { color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
-.side-nav li.active { color: #fbbf24; background: rgba(251, 191, 36, 0.2); }
-.side-nav li.user-info { 
-  color: #FFD700; 
-  background: rgba(255, 215, 0, 0.1); 
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  cursor: default;
-  margin-bottom: 8px;
+.sidebar-nav-links li:hover { color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+.sidebar-nav-links li.active { color: #fbbf24; background: rgba(251, 191, 36, 0.2); }
+
+.sidebar-footer {
+  width: 100%;
+  padding: 16px;
+  border-top: 1px solid #333;
+  background: rgba(0, 0, 0, 0.3);
 }
-.side-nav li.user-info:hover { 
-  color: #FFD700; 
-  background: rgba(255, 215, 0, 0.1); 
+
+.footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-links li {
+  font-size: 12px;
+}
+
+.footer-links a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  display: block;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.footer-links a:hover {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
 }
 
 .side-nav.open { transform: translateX(0); }
@@ -185,23 +229,46 @@ body {
   .side-nav {
     width: 100%;
     top: 56px;
+  }
+  
+  .sidebar-main {
     padding: 20px;
   }
   
-  .side-nav ul {
+  .sidebar-nav-links {
     gap: 20px;
   }
   
-  .side-nav li {
+  .sidebar-nav-links li {
     font-size: 18px;
     padding: 12px 20px;
     text-align: center;
+  }
+  
+  .sidebar-footer {
+    padding: 12px;
+  }
+  
+  .footer-links {
+    gap: 6px;
+  }
+  
+  .footer-links li {
+    font-size: 11px;
   }
 }
 
 @media (max-width: 480px) {
   .side-nav {
     top: 56px;
+  }
+  
+  .sidebar-main {
+    padding: 16px;
+  }
+  
+  .footer-links li {
+    font-size: 10px;
   }
 }
 
@@ -286,7 +353,7 @@ body {
   width: 100%;
 }
 .feature-btn { 
-  background: rgba(0,0,0,0.4); 
+  background: #000; 
   border: 2px solid #fbbf24; 
   color: #fbbf24; 
   padding: 24px 20px; 
@@ -303,8 +370,11 @@ body {
   backdrop-filter: blur(3px);
   min-height: 120px;
   justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
 }
-.feature-btn:hover { 
+
+/* Main buttons uniform styling */
+.feature-btn.main-btn:hover { 
   background: #fbbf24; 
   color: #000; 
   transform: translateY(-2px);
@@ -806,6 +876,62 @@ body {
   animation: pulse 1.5s infinite;
 }
 
+/* SPECTER Tabs Styling */
+.specter-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 16px;
+}
+
+.specter-tab {
+  background: transparent;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+  text-align: center;
+}
+
+.specter-tab:hover {
+  border-color: #fbbf24;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.specter-tab.active {
+  background: #fbbf24;
+  color: #000;
+  border-color: #fbbf24;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .specter-tabs {
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  
+  .specter-tab {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .specter-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
 /* Mobile Voice Assistant Button */
 @media (max-width: 768px) {
   .voice-assistant-btn {
@@ -996,15 +1122,8 @@ body {
   left: 0;
 }
 
-/* User Menu Styles */
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 12px;
-}
-
-.status-button {
+/* Subscription Button */
+.subscription-btn {
   background: rgba(255, 215, 0, 0.1);
   border: 1px solid rgba(255, 215, 0, 0.3);
   color: #FFD700;
@@ -1018,9 +1137,10 @@ body {
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-right: 8px;
 }
 
-.status-button:hover {
+.subscription-btn:hover {
   background: rgba(255, 215, 0, 0.2);
   border-color: rgba(255, 215, 0, 0.5);
   transform: translateY(-1px);
@@ -1028,13 +1148,17 @@ body {
 }
 
 @media (max-width: 768px) {
-  .status-button {
+  .subscription-btn {
     font-size: 10px;
     padding: 4px 8px;
+    margin-right: 6px;
   }
-  
-  .nav-center .nav-title {
-    font-size: 14px;
-    letter-spacing: 1px;
+}
+
+@media (max-width: 480px) {
+  .subscription-btn {
+    font-size: 9px;
+    padding: 3px 6px;
+    margin-right: 4px;
   }
 }

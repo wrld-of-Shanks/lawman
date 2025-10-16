@@ -1,44 +1,18 @@
 import os
+import fitz  # PyMuPDF
+from docx import Document
 from typing import List
 
-# Make imports optional to avoid dependency issues
-try:
-    import fitz  # PyMuPDF
-except ImportError:
-    fitz = None
-
-try:
-    from docx import Document
-except ImportError:
-    Document = None
-
 def extract_text_from_pdf(pdf_path: str) -> str:
-    """Extract text from a PDF file."""
-    if fitz is None:
-        return f"[PDF CONTENT FROM: {pdf_path}]"
-    
+    doc = fitz.open(pdf_path)
     text = ""
-    try:
-        with fitz.open(pdf_path) as doc:
-            for page in doc:
-                text += page.get_text()
-    except Exception as e:
-        text = f"[Error reading PDF: {str(e)}]"
+    for page in doc:
+        text += page.get_text()
     return text
 
 def extract_text_from_docx(docx_path: str) -> str:
-    """Extract text from a DOCX file."""
-    if Document is None:
-        return f"[DOCX CONTENT FROM: {docx_path}]"
-    
-    try:
-        doc = Document(docx_path)
-        text = ""
-        for para in doc.paragraphs:
-            text += para.text + "\n"
-        return text
-    except Exception as e:
-        return f"[Error reading DOCX: {str(e)}]"
+    doc = Document(docx_path)
+    return "\n".join([para.text for para in doc.paragraphs])
 
 def extract_text_from_txt(txt_path: str) -> str:
     with open(txt_path, 'r', encoding='utf-8') as f:
@@ -62,4 +36,4 @@ def parse_and_chunk(file_path: str) -> List[str]:
         text = extract_text_from_txt(file_path)
     else:
         raise ValueError(f"Unsupported file type: {ext}")
-    return chunk_text(text)
+    return chunk_text(text) 

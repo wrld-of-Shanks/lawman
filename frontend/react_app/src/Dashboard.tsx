@@ -177,11 +177,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigateHome })
                 {user.email}
               </Typography>
               <Box mt={1}>
-                <Chip
-                  label={user.role.toUpperCase()}
-                  color={user.role === 'admin' ? 'error' : 'primary'}
-                  size="small"
-                />
+                {user.role && (
+                  <Chip
+                    label={user.role.toUpperCase()}
+                    color={user.role === 'admin' ? 'error' : 'primary'}
+                    size="small"
+                  />
+                )}
                 {user.is_verified && (
                   <Chip
                     label="Verified"
@@ -480,7 +482,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigateHome })
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="body1" sx={{ color: '#fff' }}>Account Created:</Typography>
                 <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                  {new Date(user.created_at).toLocaleDateString()}
+                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
                 </Typography>
               </Box>
               <Box display="flex" justifyContent="space-between">
@@ -493,11 +495,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigateHome })
               </Box>
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="body1" sx={{ color: '#fff' }}>Account Type:</Typography>
-                <Chip
-                  label={user.role.toUpperCase()}
-                  color={user.role === 'admin' ? 'error' : 'primary'}
-                  size="small"
-                />
+                {user.role && (
+                  <Chip
+                    label={user.role.toUpperCase()}
+                    color={user.role === 'admin' ? 'error' : 'primary'}
+                    size="small"
+                  />
+                )}
               </Box>
             </Box>
           </CardContent>
