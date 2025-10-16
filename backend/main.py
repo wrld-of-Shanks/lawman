@@ -197,7 +197,8 @@ app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://specter-legal-assistant.netlify.app",  # Production Netlify domain
+        "https://specter-legal-assistant.netlify.app",  # Original Netlify domain
+        "https://specter0.netlify.app",  # New Netlify domain
         "http://localhost:3000",  # Local development (React dev server)
     ],
     allow_credentials=True,
