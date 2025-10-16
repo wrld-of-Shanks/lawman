@@ -84,9 +84,28 @@ async def health_check():
             "timestamp": time.time()
         }
 
-@app.get("/")
-async def root():
-    return {"message": "SPECTER Legal Assistant API", "docs": "/docs"}
+@app.get("/debug")
+async def debug_endpoint():
+    """Debug endpoint to check database connection and environment"""
+    try:
+        # Test database connection
+        db = get_database()
+        if db is None:
+            return {"error": "Database connection failed", "mongodb_url": os.getenv("MONGODB_URL"), "database_name": os.getenv("DATABASE_NAME")}
+
+        # Test collections
+        users_collection = get_users_collection()
+        test_user = await users_collection.find_one({"email": "test@example.com"})
+
+        return {
+            "status": "ok",
+            "mongodb_url": os.getenv("MONGODB_URL")[:20] + "..." if os.getenv("MONGODB_URL") else "Not set",
+            "database_name": os.getenv("DATABASE_NAME"),
+            "jwt_secret_set": bool(os.getenv("JWT_SECRET_KEY")),
+            "test_query_result": "User found" if test_user else "No test user"
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 # Database events
 @app.on_event("startup")
@@ -112,13 +131,32 @@ async def shutdown_event():
     except Exception as e:
         print(f"Shutdown error: {str(e)}")
 
-# Include auth router
-app.include_router(auth_router, prefix="/auth", tags=["authentication"])
+@app.get("/debug")
+async def debug_endpoint():
+    """Debug endpoint to check database connection and environment"""
+    try:
+        # Test database connection
+        db = get_database()
+        if db is None:
+            return {"error": "Database connection failed", "mongodb_url": os.getenv("MONGODB_URL"), "database_name": os.getenv("DATABASE_NAME")}
 
-# Simplified API endpoints for debugging
+        # Test collections
+        users_collection = get_users_collection()
+        test_user = await users_collection.find_one({"email": "test@example.com"})
+
+        return {
+            "status": "ok",
+            "mongodb_url": os.getenv("MONGODB_URL")[:20] + "..." if os.getenv("MONGODB_URL") else "Not set",
+            "database_name": os.getenv("DATABASE_NAME"),
+            "jwt_secret_set": bool(os.getenv("JWT_SECRET_KEY")),
+            "test_query_result": "User found" if test_user else "No test user"
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/")
 async def root():
-    return {"message": "SPECTER Legal Assistant API", "status": "running"}
+    return {"message": "SPECTER Legal Assistant API", "docs": "/docs"}
 
 @app.get("/test")
 async def test():
@@ -141,10 +179,13 @@ async def test():
 #     response = await call_next(request)
 #     return response
 
-# Add CORS middleware - simplified
+# Add CORS middleware - updated for production with specific origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for debugging
+    allow_origins=[
+        "https://specter-legal-assistant.netlify.app",  # Production Netlify domain
+        "http://localhost:3000",  # Local development (React dev server)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -958,6 +999,5 @@ async def razorpay_webhook(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8002))
-    host = os.getenv("HOST", "0.0.0.0")
-    uvicorn.run(app, host=host, port=port)
+    port = int(os.getenv("PORT", 8000))  # Use Render's PORT or default to 8000 for local dev
+    uvicorn.run(app, host="0.0.0.0", port=port)
