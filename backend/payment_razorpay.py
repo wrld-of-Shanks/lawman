@@ -7,10 +7,18 @@ from pydantic import BaseModel
 from fastapi import HTTPException
 import json
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from parent directory
+load_dotenv('../.env')
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_test_your_key_id')
 RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', 'your_key_secret')
+
+# Verify credentials are loaded
+if RAZORPAY_KEY_ID == 'rzp_test_your_key_id' or RAZORPAY_KEY_SECRET == 'your_key_secret':
+    print("⚠️  WARNING: Using default Razorpay credentials. Please update your .env file.")
 
 # Initialize Razorpay client
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))

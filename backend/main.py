@@ -17,6 +17,12 @@ except ImportError:
 from auth_mongo import auth_router
 from mongodb_config import connect_to_mongo, close_mongo_connection, create_indexes
 
+# Import comprehensive legal database
+from comprehensive_legal_db import COMPREHENSIVE_LEGAL_FAQ, get_comprehensive_legal_info, SPECIALIZED_LEGAL_AREAS
+
+# Import legal solutions
+from legal_solutions import get_legal_solution, format_legal_solution, TOPIC_TO_SOLUTION
+
 # Optional imports with fallbacks
 try:
     from tracing import tracing, TraceEvents, log_system_event, log_chat_event
@@ -25,10 +31,15 @@ except ImportError:
     class TraceEvents:
         SYSTEM_START = "system_start"
         CHAT_MESSAGE = "chat_message"
+        DOC_UPLOAD = "doc_upload"
+        DOC_ERROR = "doc_error"
     
     class DummyTracing:
         async def initialize(self): pass
         async def log_trace(self, *args, **kwargs): pass
+        async def get_traces(self, **kwargs): return []
+        async def get_system_stats(self): return {}
+        async def get_user_activity(self, user_id, days): return {}
     
     tracing = DummyTracing()
     log_system_event = lambda *args, **kwargs: None
@@ -171,6 +182,9 @@ async def test():
 
 # from document_generator import generator_router
 # app.include_router(generator_router, prefix="/generate", tags=["document-generator"])
+
+# Include authentication router
+app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 
 # Temporarily comment out complex middleware for debugging
 # @app.middleware("http")
@@ -522,6 +536,16 @@ KEYWORD_ALIASES = {
     "match fixing": "sports law",
     "athletics": "sports law"
 }
+
+# Define missing variables for legal topics
+SPECIALIZED_LEGAL_AREAS = {
+    # This can be expanded with more specialized legal areas as needed
+    "detailed_solutions": "Legal solutions with step-by-step procedures",
+    "case_law": "Legal precedents and landmark judgments",
+    "procedural_law": "Court procedures and legal processes"
+}
+
+# Map topics to solution IDs for detailed solutions
 
 @app.post("/chat")
 async def chat(request: ChatRequest):

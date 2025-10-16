@@ -3,6 +3,13 @@ Comprehensive Indian Legal Database
 Complete coverage of all major Indian law topics with detailed information
 """
 
+# Define specialized legal areas
+SPECIALIZED_LEGAL_AREAS = {
+    "detailed_solutions": "Legal solutions with step-by-step procedures",
+    "case_law": "Legal precedents and landmark judgments",
+    "procedural_law": "Court procedures and legal processes"
+}
+
 # COMPREHENSIVE INDIAN LEGAL DATABASE - 200+ TOPICS
 
 COMPREHENSIVE_LEGAL_FAQ = {
@@ -52,6 +59,8 @@ COMPREHENSIVE_LEGAL_FAQ = {
     "fir_filing": "FIR (First Information Report) filing procedure: 1) Visit nearest police station, 2) Provide written complaint with details of incident, 3) Police must register FIR for cognizable offenses, 4) Get FIR copy with number, 5) If police refuse, approach Magistrate under Section 156(3) CrPC. FIR must be filed immediately after incident. No fees required. Essential details: date, time, place, nature of offense, witnesses.",
     
     "police_complaint": "To file police complaint: 1) Visit police station in whose jurisdiction crime occurred, 2) Submit written application with incident details, 3) For cognizable offenses, FIR will be registered, 4) For non-cognizable offenses, NC report will be made, 5) Get acknowledgment receipt, 6) Follow up on investigation. Required information: complainant details, incident description, evidence, witness details.",
+    
+    "bail": "Bail is the temporary release of an accused person awaiting trial. Types include regular bail (Section 437), anticipatory bail (Section 438), and default bail (Section 167). Bail is generally granted except for serious offenses.",
     
     # ==================== CIVIL LAW ====================
     "contract_law": "Indian Contract Act 1872 governs agreements and contracts. Essential elements include offer, acceptance, consideration, capacity, free consent, lawful object, and certainty. Breach attracts damages or specific performance.",
@@ -328,28 +337,7 @@ COMPREHENSIVE_LEGAL_FAQ = {
     "foreign_awards": "Foreign Awards (Recognition and Enforcement) Act 1961 provides for recognition and enforcement of foreign arbitral awards in India based on reciprocity principle."
 }
 
-# Additional specialized legal areas
-SPECIALIZED_LEGAL_AREAS = {
-    "aviation_law": "Aircraft Act 1934 and Aircraft Rules regulate civil aviation. Directorate General of Civil Aviation (DGCA) regulates air transport, aircraft maintenance, and pilot licensing.",
-    
-    "maritime_law": "Merchant Shipping Act 1958 governs maritime commerce and navigation. Covers ship registration, crew certification, marine pollution, and maritime accidents.",
-    
-    "space_law": "Indian Space Research Organisation Act 1969 establishes ISRO. Space Activities Bill (proposed) will regulate private space activities and satellite communications.",
-    
-    "nuclear_law": "Atomic Energy Act 1962 regulates nuclear energy and materials. Nuclear Liability Act 2010 provides for civil liability for nuclear damage.",
-    
-    "telecommunications_law": "Indian Telegraph Act 1885 and Telecom Regulatory Authority of India Act 1997 regulate telecommunications. Covers licensing, tariffs, and quality of service.",
-    
-    "electricity_law": "Electricity Act 2003 regulates electricity generation, transmission, and distribution. Provides for competitive markets and regulatory commissions.",
-    
-    "railways_law": "Railways Act 1989 governs railway operations. Railway Claims Tribunal adjudicates claims for compensation arising from railway accidents.",
-    
-    "postal_law": "Indian Post Office Act 1898 regulates postal services. India Post provides mail, parcel, and financial services across the country.",
-    
-    "cooperative_law": "Cooperative societies are regulated by state cooperative acts. Multi-State Cooperative Societies Act 2002 governs societies operating in multiple states.",
-    
-    "charitable_trusts": "Public trusts are regulated by state public trust acts. Income Tax Act provides tax exemptions for charitable activities under Section 12A and 80G."
-}
+# Additional specialized legal areas (this is a duplicate definition - the main one is at the top)
 
 def get_comprehensive_legal_info(query: str) -> str:
     """Get comprehensive legal information for any query"""
@@ -420,6 +408,10 @@ def get_comprehensive_legal_info(query: str) -> str:
         "fir": "fir_filing",
         "first information report": "fir_filing",
         "police complaint": "police_complaint",
+        "bail": "bail",
+        "arrest": "bail",
+        "detention": "bail",
+        "custody": "bail",
         
         # Family Law
         "divorce": "divorce_procedure",

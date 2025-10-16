@@ -15,7 +15,7 @@ database = None
 async def connect_to_mongo():
     """Create database connection"""
     global mongo_client, database
-    mongo_client = AsyncIOMotorClient(MONGODB_URL)
+    mongo_client = AsyncIOMotorClient(MONGODB_URL, tls=True)
     database = mongo_client[DATABASE_NAME]
     print(f"Connected to MongoDB: {DATABASE_NAME}")
 
@@ -77,5 +77,5 @@ async def create_indexes():
 # Sync version for non-async operations
 def get_sync_database():
     """Get synchronous database connection for non-async operations"""
-    sync_client = MongoClient(MONGODB_URL)
+    sync_client = MongoClient(MONGODB_URL, tls=True)
     return sync_client[DATABASE_NAME]

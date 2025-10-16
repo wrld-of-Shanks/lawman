@@ -22,8 +22,8 @@ from pymongo.errors import DuplicateKeyError
 # Load environment variables
 load_dotenv()
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context - using bcrypt for compatibility
+pwd_context = CryptContext(schemes=["bcrypt", "pbkdf2_sha256"], deprecated="auto")
 
 # JWT Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
@@ -61,10 +61,20 @@ class PasswordResetConfirm(BaseModel):
 
 # Helper functions
 def hash_password(password: str) -> str:
+    # Truncate password to 72 bytes to avoid bcrypt error
+    if len(password.encode('utf-8')) > 72:
+        password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        # Truncate password to 72 bytes to avoid bcrypt error
+        if len(plain_password.encode('utf-8')) > 72:
+            plain_password = plain_password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 def generate_otp() -> str:
     return ''.join(random.choices(string.digits, k=6))
@@ -247,6 +257,12 @@ Thank you for using SPECTER!
 auth_router = APIRouter()
 security = HTTPBearer()
 
+# Handle CORS preflight requests for auth endpoints
+@auth_router.options("/{path:path}")
+async def auth_options_handler(path: str):
+    """Handle CORS preflight requests for auth endpoints"""
+    return {"message": "OK"}
+
 # Helper function to get current user
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -279,6 +295,13 @@ async def get_current_admin(current_user: dict = Depends(get_current_user)):
 @auth_router.post("/register", response_model=dict)
 async def register(user_data: UserCreate):
     try:
+        # Validate password length before processing
+        if len(user_data.password.encode('utf-8')) > 72:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be 72 characters or fewer to ensure compatibility."
+            )
+
         # Check if user already exists
         existing_user = await get_user_by_email(user_data.email)
         if existing_user:
