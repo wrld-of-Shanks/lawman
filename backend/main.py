@@ -17,10 +17,15 @@ from typing import Dict, List
 
 app = FastAPI()
 
-# Allow CORS for local frontend development
+# Allow CORS for frontend domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://specter0.netlify.app",  # Production Netlify
+        "https://specter-legal-assistant.netlify.app",  # Alternative/previous Netlify
+        "http://localhost:3000",  # Local development
+        "http://127.0.0.1:3000",  # Local alternative
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
