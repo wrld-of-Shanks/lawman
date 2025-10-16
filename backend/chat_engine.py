@@ -1,4 +1,7 @@
-from embed_store import search_chunks
+try:
+    from .embed_store import search_chunks
+except ImportError:
+    from embed_store import search_chunks
 from typing import Dict
 import os
 import openai

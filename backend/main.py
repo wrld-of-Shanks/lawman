@@ -5,9 +5,6 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from pydantic import BaseModel, EmailStr
-from doc_parser import parse_and_chunk
-from embed_store import add_chunks_to_db
-from chat_engine import answer_query
 import smtplib
 from email.mime.text import MIMEText
 import sqlite3
@@ -15,11 +12,23 @@ import logging
 from openai import OpenAI
 from typing import Dict, List
 
-# Import routers
-from auth_mongo import auth_router
-from legal_api import legal_router
-from legal_solutions_flow import solutions_router
-from document_generator import generator_router
+# Robust intra-package imports (works with both `backend.main` and `main` entrypoints)
+try:
+    from .doc_parser import parse_and_chunk
+    from .embed_store import add_chunks_to_db
+    from .chat_engine import answer_query
+    from .auth_mongo import auth_router
+    from .legal_api import legal_router
+    from .legal_solutions_flow import solutions_router
+    from .document_generator import generator_router
+except ImportError:
+    from doc_parser import parse_and_chunk
+    from embed_store import add_chunks_to_db
+    from chat_engine import answer_query
+    from auth_mongo import auth_router
+    from legal_api import legal_router
+    from legal_solutions_flow import solutions_router
+    from document_generator import generator_router
 
 app = FastAPI(title="SPECTER Legal Assistant API", version="1.0.0")
 

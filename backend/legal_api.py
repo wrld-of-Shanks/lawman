@@ -7,14 +7,24 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
 import logging
-from legal_processor import (
-    get_legal_processor, 
-    analyze_legal_text, 
-    extract_legal_entities,
-    get_document_structure,
-    summarize_legal_document
-)
-from auth_mongo import get_current_user
+try:
+    from .legal_processor import (
+        get_legal_processor,
+        analyze_legal_text,
+        extract_legal_entities,
+        get_document_structure,
+        summarize_legal_document,
+    )
+    from .auth_mongo import get_current_user
+except ImportError:
+    from legal_processor import (
+        get_legal_processor,
+        analyze_legal_text,
+        extract_legal_entities,
+        get_document_structure,
+        summarize_legal_document,
+    )
+    from auth_mongo import get_current_user
 
 # Create router
 legal_router = APIRouter()

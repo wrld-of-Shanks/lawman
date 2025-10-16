@@ -13,8 +13,12 @@ import random
 import string
 import smtplib
 from email.mime.text import MIMEText
-from mongodb_config import get_users_collection, get_otps_collection, get_user_sessions_collection
-from tracing import TraceEvents, log_auth_event, tracing
+try:
+    from .mongodb_config import get_users_collection, get_otps_collection, get_user_sessions_collection
+    from .tracing import TraceEvents, log_auth_event, tracing
+except ImportError:
+    from mongodb_config import get_users_collection, get_otps_collection, get_user_sessions_collection
+    from tracing import TraceEvents, log_auth_event, tracing
 from dotenv import load_dotenv
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
