@@ -1,9 +1,10 @@
 [variables]
-WORKDIR = "backend"
-PYTHONPATH = "/opt/render/project/src"
+NODE_VERSION = "18"
+NPM_VERSION = "9"
+PYTHON_VERSION = "3.13"
 
 [phases.setup]
-nixPkgs = ["python311", "gcc", "g++", "pkgconfig", "freetype", "fontconfig", "harfbuzz"]
+nixPkgs = ["python313", "nodejs-18_x", "gcc", "g++", "pkgconfig", "freetype", "fontconfig", "harfbuzz"]
 
 [phases.install]
 cmds = [
