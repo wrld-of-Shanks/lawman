@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import VoiceAssistant from './VoiceAssistant';
+import config from './config';
 
 function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -53,7 +54,7 @@ function App() {
     setIsLoading(true);
     try {
       const prefixed = selectedLanguage === 'English' ? chatMessage : `Respond in ${selectedLanguage}. ${chatMessage}`;
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${config.API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prefixed })
@@ -69,7 +70,7 @@ function App() {
   const handleTranslate = async () => {
     if (!chatResponse.trim() || selectedLanguage === 'English') return;
     try {
-      const resp = await fetch('http://localhost:8000/translate', {
+      const resp = await fetch(`${config.API_BASE_URL}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: chatResponse, target_lang: selectedLanguage })
@@ -170,7 +171,7 @@ function App() {
                 try {
                   const form = new FormData();
                   form.append('file', selectedFile);
-                  const resp = await fetch('http://localhost:8000/upload', {
+                  const resp = await fetch(`${config.API_BASE_URL}/upload`, {
                     method: 'POST',
                     body: form
                   });

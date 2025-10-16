@@ -5,9 +5,9 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from pydantic import BaseModel, EmailStr
-from backend.doc_parser import parse_and_chunk
-from backend.embed_store import add_chunks_to_db
-from backend.chat_engine import answer_query
+from doc_parser import parse_and_chunk
+from embed_store import add_chunks_to_db
+from chat_engine import answer_query
 import smtplib
 from email.mime.text import MIMEText
 import sqlite3
@@ -15,7 +15,28 @@ import logging
 from openai import OpenAI
 from typing import Dict, List
 
-app = FastAPI()
+# Import routers
+from auth_mongo import auth_router
+from legal_api import legal_router
+from legal_solutions_flow import solutions_router
+from document_generator import generator_router
+
+app = FastAPI(title="SPECTER Legal Assistant API", version="1.0.0")
+
+# Health check endpoint
+@app.get("/")
+def root():
+    return {"message": "SPECTER Legal Assistant API is running", "status": "healthy"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "message": "API is operational"}
+
+# Register routers
+app.include_router(auth_router, prefix="/auth", tags=["authentication"])
+app.include_router(legal_router, prefix="/legal", tags=["legal-analysis"])
+app.include_router(solutions_router, prefix="/solutions", tags=["legal-solutions"])
+app.include_router(generator_router, prefix="/generate", tags=["document-generation"])
 
 # Allow CORS for frontend domains
 app.add_middleware(
@@ -232,6 +253,8 @@ async def chat(request: ChatRequest):
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
+    import os
+    os.makedirs("data/processed", exist_ok=True)
     content = await file.read()
     with open(f"data/processed/{file.filename}", "wb") as f:
         f.write(content)
@@ -279,39 +302,45 @@ def law_search(
     q: str = Query(..., description="Search term"),
     act: str = Query(None, description="Act name (optional)")
 ):
-    conn = sqlite3.connect("legal_acts.db")
-    c = conn.cursor()
-    if act:
-        c.execute(
-            "SELECT act, section, title, definition, punishment FROM laws WHERE act=? AND (title LIKE ? OR definition LIKE ? OR keywords LIKE ?)",
-            (act, f"%{q}%", f"%{q}%", f"%{q}%")
-        )
-    else:
-        c.execute(
-            "SELECT act, section, title, definition, punishment FROM laws WHERE title LIKE ? OR definition LIKE ? OR keywords LIKE ?",
-            (f"%{q}%", f"%{q}%", f"%{q}%")
-        )
-    results = [
-        {
-            "act": row[0],
-            "section": row[1],
-            "title": row[2],
-            "definition": row[3],
-            "punishment": row[4]
-        }
-        for row in c.fetchall()
-    ]
-    conn.close()
-    return {"results": results}
+    try:
+        conn = sqlite3.connect("legal_acts.db")
+        c = conn.cursor()
+        if act:
+            c.execute(
+                "SELECT act, section, title, definition, punishment FROM laws WHERE act=? AND (title LIKE ? OR definition LIKE ? OR keywords LIKE ?)",
+                (act, f"%{q}%", f"%{q}%", f"%{q}%")
+            )
+        else:
+            c.execute(
+                "SELECT act, section, title, definition, punishment FROM laws WHERE title LIKE ? OR definition LIKE ? OR keywords LIKE ?",
+                (f"%{q}%", f"%{q}%", f"%{q}%")
+            )
+        results = [
+            {
+                "act": row[0],
+                "section": row[1],
+                "title": row[2],
+                "definition": row[3],
+                "punishment": row[4]
+            }
+            for row in c.fetchall()
+        ]
+        conn.close()
+        return {"results": results}
+    except sqlite3.OperationalError:
+        return {"results": [], "message": "Legal database not available"}
 
 @app.get('/law_acts')
 def law_acts():
-    conn = sqlite3.connect("legal_acts.db")
-    c = conn.cursor()
-    c.execute("SELECT DISTINCT act FROM laws ORDER BY act")
-    acts = [row[0] for row in c.fetchall()]
-    conn.close()
-    return {"acts": acts} 
+    try:
+        conn = sqlite3.connect("legal_acts.db")
+        c = conn.cursor()
+        c.execute("SELECT DISTINCT act FROM laws ORDER BY act")
+        acts = [row[0] for row in c.fetchall()]
+        conn.close()
+        return {"acts": acts}
+    except sqlite3.OperationalError:
+        return {"acts": [], "message": "Legal database not available"}
 
 # --- Translation endpoint ---
 class TranslateRequest(BaseModel):
@@ -324,3 +353,7 @@ def translate(req: TranslateRequest):
         return {"translated": ""}
     translated = translate_text(req.text, req.target_lang)
     return {"translated": translated}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

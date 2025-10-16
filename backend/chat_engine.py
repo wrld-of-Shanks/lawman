@@ -1,4 +1,4 @@
-from backend.embed_store import search_chunks
+from embed_store import search_chunks
 from typing import Dict
 import os
 import openai

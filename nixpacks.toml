@@ -1,11 +1,16 @@
 [variables]
 WORKDIR = "backend"
+PYTHONPATH = "/opt/render/project/src"
 
 [phases.setup]
-nixPkgs = ["python39", "gcc", "g++"]
+nixPkgs = ["python311", "gcc", "g++", "pkgconfig", "freetype", "fontconfig", "harfbuzz"]
 
 [phases.install]
-cmds = ["cd backend && python -m venv venv", "cd backend && ./venv/bin/pip install --upgrade pip", "cd backend && ./venv/bin/pip install -r requirements.txt"]
+cmds = [
+  "cd backend && python -m venv venv", 
+  "cd backend && ./venv/bin/pip install --upgrade pip setuptools wheel", 
+  "cd backend && ./venv/bin/pip install -r requirements.txt"
+]
 
 [start]
 cmd = "cd backend && ./venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
