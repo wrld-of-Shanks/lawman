@@ -1,14 +1,17 @@
 import os
-import fitz  # PyMuPDF
+from pypdf import PdfReader
 from docx import Document
 from typing import List
 
 def extract_text_from_pdf(pdf_path: str) -> str:
-    doc = fitz.open(pdf_path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
+    reader = PdfReader(pdf_path)
+    parts = []
+    for page in reader.pages:
+        try:
+            parts.append(page.extract_text() or "")
+        except Exception:
+            parts.append("")
+    return "\n".join(parts)
 
 def extract_text_from_docx(docx_path: str) -> str:
     doc = Document(docx_path)
