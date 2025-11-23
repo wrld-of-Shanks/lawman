@@ -47,3 +47,12 @@ temp_uploads/
 *.db
 *.sqlite
 *.sqlite3
+chroma_db/
+backend/chroma_db/
+
+# Generated files
+*_metrics.json
+*_report.txt
+training_report.txt
+model_metrics.json
+rag_metrics.json
