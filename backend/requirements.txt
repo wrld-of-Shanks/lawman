@@ -12,4 +12,5 @@ sentence-transformers
 python-multipart
 passlib[bcrypt]
 pyjwt
+python-jose[cryptography]
 gunicorn
