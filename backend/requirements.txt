@@ -3,8 +3,7 @@ uvicorn
 python-dotenv
 pymongo
 motor
-pydantic
-email-validator
+pydantic[email]
 razorpay
 requests
 google-generativeai
