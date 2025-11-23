@@ -3,10 +3,13 @@ import './App.css';
 import VoiceAssistant from './VoiceAssistant.js';
 import config from './config.ts';
 import './LegalServices.css';
+import Login from './Login.tsx';
+import Signup from './Signup.tsx';
+import UserProfile from './UserProfile.tsx';
 import { legalServicesData } from './LegalServicesData';
 
 function App() {
-  const [currentView, setCurrentView] = useState('home');
+  const [currentView, setCurrentView] = useState('login'); // Start at login
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<Array<{ message: string, response: string, isSolution: boolean }>>([]);
 
@@ -20,8 +23,40 @@ function App() {
   const [docType, setDocType] = useState('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [selectedAction, setSelectedAction] = useState('summarize');
+  const [budgetValue, setBudgetValue] = useState(50000); // Default ₹50,000
+  const [requestSent, setRequestSent] = useState(false);
 
-  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెలుగు', 'మరాఠీ'];
+  // Auth State
+  const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('specter_token'));
+  const [usageStats, setUsageStats] = useState<any>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const fetchUsageStats = async (authToken: string) => {
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/usage`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUsageStats(data);
+
+        // Check if user has exceeded limits
+        const questionsExceeded = data.questions.limit !== -1 && data.questions.remaining <= 0;
+        const uploadsExceeded = data.uploads.limit !== -1 && data.uploads.remaining <= 0;
+
+        if (questionsExceeded || uploadsExceeded) {
+          setShowUpgradeModal(true);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch usage stats", error);
+    }
+  };
+
+  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెలుగు', 'మరాಠೀ'];
   const [selectedLanguage, setSelectedLanguage] = useState<string>(() => localStorage.getItem('specter_lang') || 'English');
 
   // Listen for voice assistant navigation events
@@ -40,6 +75,42 @@ function App() {
       window.removeEventListener('navigateTo', handleVoiceNavigation as EventListener);
     };
   }, []);
+
+  // Check for existing session
+  useEffect(() => {
+    if (token) {
+      fetch(`${config.API_BASE_URL}/auth/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Session expired');
+        })
+        .then(userData => {
+          setUser(userData);
+          setCurrentView('home'); // Go to home if logged in
+          fetchUsageStats(token); // Fetch usage stats
+        })
+        .catch(() => {
+          handleLogout();
+        });
+    }
+  }, [token]);
+
+  const handleLoginSuccess = (newToken: string, userData: any) => {
+    setToken(newToken);
+    setUser(userData);
+    localStorage.setItem('specter_token', newToken);
+    setCurrentView('home');
+    fetchUsageStats(newToken); // Fetch usage stats on login
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('specter_token');
+    setCurrentView('login');
+  };
 
   const t = (key: string): string => {
     const dict: Record<string, Record<string, string>> = {
@@ -63,18 +134,50 @@ function App() {
 
     try {
       const prefixed = selectedLanguage === 'English' ? userMessage : `Respond in ${selectedLanguage}. ${userMessage}`;
+      const headers: any = { 'Content-Type': 'application/json' };
+
+      // Add auth token if user is logged in
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${config.API_BASE_URL}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ message: prefixed })
       });
+
       const data = await response.json();
 
-      setChatHistory(prev => [{
-        message: userMessage,
-        response: data.answer || 'No response generated.',
-        isSolution: false
-      }, ...prev]);
+      if (!response.ok) {
+        // Handle limit errors
+        if (response.status === 403) {
+          setChatHistory(prev => [{
+            message: userMessage,
+            response: `⚠️ ${data.error || 'Usage limit reached. Please upgrade your subscription.'}`,
+            isSolution: false
+          }, ...prev]);
+        } else if (response.status === 401) {
+          setChatHistory(prev => [{
+            message: userMessage,
+            response: '🔒 Please login to use SPECTER.',
+            isSolution: false
+          }, ...prev]);
+        } else {
+          throw new Error(data.error || 'Request failed');
+        }
+      } else {
+        setChatHistory(prev => [{
+          message: userMessage,
+          response: data.answer || 'No response generated.',
+          isSolution: false
+        }, ...prev]);
+
+        // Refresh usage stats after successful question
+        if (token) {
+          fetchUsageStats(token);
+        }
+      }
     } catch (error) {
       setChatHistory(prev => [{
         message: userMessage,
@@ -83,6 +186,7 @@ function App() {
       }, ...prev]);
     }
     setIsLoading(false);
+    setChatMessage('');
   };
 
 
@@ -143,6 +247,24 @@ function App() {
 
   const renderContent = () => {
     switch (currentView) {
+      case 'login':
+        return <Login onLoginSuccess={handleLoginSuccess} onSwitchToSignup={() => setCurrentView('signup')} />;
+
+      case 'signup':
+        return <Signup onSignupSuccess={() => setCurrentView('login')} onSwitchToLogin={() => setCurrentView('login')} />;
+
+      case 'profile':
+        return user ? (
+          <UserProfile
+            user={user}
+            token={token!}
+            onLogout={handleLogout}
+            onBack={() => setCurrentView('home')}
+          />
+        ) : (
+          <Login onLoginSuccess={handleLoginSuccess} onSwitchToSignup={() => setCurrentView('signup')} />
+        );
+
       case 'chat':
         return (
           <div className="bot-interface">
@@ -274,8 +396,15 @@ function App() {
                       // Step 1: Upload
                       const form = new FormData();
                       form.append('file', selectedFile);
+
+                      const headers: any = {};
+                      if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                      }
+
                       const resp = await fetch(`${config.API_BASE_URL}/upload_doc`, {
                         method: 'POST',
+                        headers,
                         body: form
                       });
                       const data = await resp.json();
@@ -298,8 +427,12 @@ function App() {
                         const analyzeData = await analyzeResp.json();
                         setAnalysisResult({ ...analyzeData, type: selectedAction });
                         setUploadStatus("Analysis complete!");
+                      } else if (resp.status === 403) {
+                        setUploadStatus(`⚠️ ${data.error || 'Upload limit reached. Please upgrade your subscription.'}`);
+                      } else if (resp.status === 401) {
+                        setUploadStatus('🔒 Please login to upload documents.');
                       } else {
-                        setUploadStatus(`Upload failed: ${data.detail || 'server error'}`);
+                        setUploadStatus(`Upload failed: ${data.detail || data.error || 'server error'}`);
                       }
                     } catch (e) {
                       setUploadStatus('Process failed. Check backend connection.');
@@ -374,15 +507,171 @@ function App() {
           <div className="bot-interface">
             <h2>Contact Human Lawyer</h2>
             <p>Connect with a real lawyer for consultation</p>
-            <form className="contact-form">
-              <input type="text" placeholder="Your Name" />
-              <input type="email" placeholder="Your Email" />
-              <textarea placeholder="Describe your case..." />
-              <button type="submit" className="contact-btn">Send Request</button>
-            </form>
-            <button onClick={() => setCurrentView('home')} className="back-btn">
-              ← Back to Home
-            </button>
+
+            {requestSent ? (
+              <div className="success-message" style={{
+                padding: '40px',
+                textAlign: 'center',
+                background: '#1a1a1a',
+                borderRadius: '12px',
+                border: '1px solid #fbbf24',
+                maxWidth: '600px',
+                margin: '30px auto'
+              }}>
+                <div style={{ fontSize: '4rem', marginBottom: '20px' }}>✅</div>
+                <h3 style={{ color: '#fbbf24', fontSize: '1.5rem', marginBottom: '10px' }}>Request Sent Successfully!</h3>
+                <p style={{ color: '#ccc', fontSize: '1.1rem', marginBottom: '30px' }}>
+                  We have received your consultation request. A lawyer will contact you within 24 hours at your provided email address.
+                </p>
+                <button
+                  onClick={() => {
+                    setRequestSent(false);
+                    setCurrentView('home');
+                  }}
+                  className="contact-btn"
+                >
+                  Return to Home
+                </button>
+              </div>
+            ) : (
+              <form className="contact-form" onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const data = {
+                  name: formData.get('name') as string,
+                  email: formData.get('email') as string,
+                  phone: formData.get('phone') as string,
+                  lawyer_type: formData.get('lawyer_type') as string,
+                  budget: formData.get('budget') as string,
+                  case_description: formData.get('case_description') as string
+                };
+
+                try {
+                  setIsLoading(true);
+                  const response = await fetch(`${config.API_BASE_URL}/api/contact_lawyer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                  });
+
+                  await response.json();
+
+                  if (response.ok) {
+                    setRequestSent(true);
+                  } else {
+                    alert('Failed to send request. Please try again.');
+                  }
+                } catch (error) {
+                  alert('Error sending request. Please check your connection.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }}>
+                <div className="form-group">
+                  <label htmlFor="name">Your Name *</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="Enter your full name"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="email">Your Email *</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="your.email@example.com"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="phone">Phone Number *</label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    placeholder="+91 XXXXX XXXXX"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="lawyer_type">Type of Lawyer *</label>
+                  <select id="lawyer_type" name="lawyer_type" required>
+                    <option value="">Select lawyer type...</option>
+                    <option value="Criminal Lawyer">Criminal Lawyer</option>
+                    <option value="Civil Lawyer">Civil Lawyer</option>
+                    <option value="Family Lawyer">Family Lawyer</option>
+                    <option value="Corporate Lawyer">Corporate Lawyer</option>
+                    <option value="Property Lawyer">Property Lawyer</option>
+                    <option value="Tax Lawyer">Tax Lawyer</option>
+                    <option value="Labor Lawyer">Labor & Employment Lawyer</option>
+                    <option value="Immigration Lawyer">Immigration Lawyer</option>
+                    <option value="Consumer Rights Lawyer">Consumer Rights Lawyer</option>
+                    <option value="Constitutional Lawyer">Constitutional Lawyer</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="budget">
+                    Budget: ₹{budgetValue.toLocaleString('en-IN')}
+                  </label>
+                  <input
+                    type="range"
+                    id="budget"
+                    name="budget"
+                    min="5000"
+                    max="1000000"
+                    step="5000"
+                    value={budgetValue}
+                    onChange={(e) => setBudgetValue(Number(e.target.value))}
+                    className="budget-slider"
+                    style={{
+                      background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${((budgetValue - 5000) / (1000000 - 5000)) * 100}%, #444 ${((budgetValue - 5000) / (1000000 - 5000)) * 100}%, #444 100%)`
+                    }}
+                    required
+                  />
+                  <div className="budget-labels">
+                    <span>₹5,000</span>
+                    <span>₹10,00,000</span>
+                  </div>
+                  <input
+                    type="hidden"
+                    name="budget"
+                    value={`₹${budgetValue.toLocaleString('en-IN')}`}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="case_description">Describe Your Case *</label>
+                  <textarea
+                    id="case_description"
+                    name="case_description"
+                    placeholder="Please provide details about your legal issue..."
+                    rows={6}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="contact-btn"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Sending...' : 'Send Request'}
+                </button>
+              </form>
+            )}
+            {!requestSent && (
+              <button onClick={() => setCurrentView('home')} className="back-btn">
+                ← Back to Home
+              </button>
+            )}
           </div>
         );
 
@@ -441,24 +730,123 @@ function App() {
           <span className="nav-title">{t('title')}</span>
         </div>
 
-        <div className="nav-right">
-          <button className="subscription-btn">
+        <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button
+            className="nav-btn"
+            onClick={() => setCurrentView(user ? 'profile' : 'login')}
+            style={{
+              background: '#1a1a1a',
+              color: '#fbbf24',
+              border: '1px solid #fbbf24',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '0.9rem'
+            }}
+          >
             Subscription
           </button>
-          <div className="lang-selector">
-            <button className="lang-button" onClick={() => setShowLangs(v => !v)}>
-              {selectedLanguage}
+
+          <div style={{ position: 'relative' }}>
+            <button
+              className="nav-btn"
+              onClick={() => setShowLangs(!showLangs)}
+              style={{
+                background: '#1a1a1a',
+                color: '#fbbf24',
+                border: '1px solid #fbbf24',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              {selectedLanguage} ▼
             </button>
             {showLangs && (
-              <div className="lang-dropdown">
-                {languages.map((lang) => (
-                  <div key={lang} className={`lang-item ${lang === selectedLanguage ? 'active' : ''}`} onClick={() => { setSelectedLanguage(lang); localStorage.setItem('specter_lang', lang); setShowLangs(false); }}>
+              <div className="lang-dropdown" style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '5px',
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                zIndex: 1000,
+                minWidth: '120px'
+              }}>
+                {languages.map(lang => (
+                  <div
+                    key={lang}
+                    className="lang-option"
+                    onClick={() => {
+                      setSelectedLanguage(lang);
+                      localStorage.setItem('specter_lang', lang);
+                      setShowLangs(false);
+                    }}
+                    style={{
+                      padding: '10px 15px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #333',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
                     {lang}
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                onClick={() => setCurrentView('profile')}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: '#fbbf24',
+                  color: '#000',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  border: '2px solid #fff'
+                }}
+                title="View Profile"
+              >
+                {user.full_name?.charAt(0).toUpperCase()}
+              </div>
+            </div>
+          ) : (
+            <button
+              className="nav-btn"
+              onClick={() => setCurrentView('login')}
+              style={{
+                background: '#fbbf24',
+                color: '#000',
+                border: 'none',
+                padding: '8px 20px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '0.9rem'
+              }}
+            >
+              Login
+            </button>
+          )}
         </div>
       </nav>
 
@@ -466,13 +854,37 @@ function App() {
       <nav className={`side-nav ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-main">
           <ul className="sidebar-nav-links">
-            <li className={currentView === 'home' ? 'active' : ''} onClick={() => { setCurrentView('home'); setSidebarOpen(false); }}>
+            <li className={currentView === 'home' ? 'active' : ''} onClick={() => {
+              if (!user) { setCurrentView('login'); } else { setCurrentView('home'); }
+              setSidebarOpen(false);
+            }}>
               {t('home')}
             </li>
-            <li onClick={() => { setCurrentView('chat'); setSidebarOpen(false); }}>SPECTER</li>
-            <li onClick={() => { setCurrentView('upload'); setSidebarOpen(false); }}>{t('upload')}</li>
-            <li onClick={() => { setServicesOpen(true); setSidebarOpen(false); }}>Legal Services</li>
-            <li onClick={() => { setCurrentView('contact'); setSidebarOpen(false); }}>{t('contact')}</li>
+            <li onClick={() => {
+              if (!user) { setCurrentView('login'); } else { setCurrentView('chat'); }
+              setSidebarOpen(false);
+            }}>SPECTER</li>
+            <li onClick={() => {
+              if (!user) { setCurrentView('login'); } else { setCurrentView('upload'); }
+              setSidebarOpen(false);
+            }}>{t('upload')}</li>
+            <li onClick={() => {
+              if (!user) { setCurrentView('login'); } else { setServicesOpen(true); }
+              setSidebarOpen(false);
+            }}>Legal Services</li>
+            <li onClick={() => {
+              if (!user) { setCurrentView('login'); } else { setCurrentView('contact'); }
+              setSidebarOpen(false);
+            }}>{t('contact')}</li>
+
+            {user && (
+              <li
+                onClick={() => { handleLogout(); setSidebarOpen(false); }}
+                style={{ color: '#ef4444', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}
+              >
+                Logout
+              </li>
+            )}
           </ul>
         </div>
         <div className="sidebar-footer">
@@ -498,6 +910,88 @@ function App() {
         <span>scroll down</span>
         <div className="scroll-line"></div>
       </div>
+
+      {/* Upgrade Modal - Blocks app when limits exceeded */}
+      {showUpgradeModal && usageStats && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.95)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            background: '#1a1a1a',
+            padding: '40px',
+            borderRadius: '16px',
+            border: '2px solid #fbbf24',
+            maxWidth: '500px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '20px' }}>⚠️</div>
+            <h2 style={{ color: '#fbbf24', marginBottom: '20px' }}>Usage Limit Reached</h2>
+            <p style={{ color: '#ccc', marginBottom: '30px', lineHeight: '1.6' }}>
+              You've reached your monthly limit for the Free plan:
+            </p>
+            <div style={{ background: '#222', padding: '20px', borderRadius: '8px', marginBottom: '30px', textAlign: 'left' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <span style={{ color: '#888' }}>Questions: </span>
+                <span style={{ color: usageStats.questions.remaining <= 0 ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>
+                  {usageStats.questions.used}/{usageStats.questions.limit}
+                </span>
+              </div>
+              <div>
+                <span style={{ color: '#888' }}>Uploads: </span>
+                <span style={{ color: usageStats.uploads.remaining <= 0 ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>
+                  {usageStats.uploads.used}/{usageStats.uploads.limit}
+                </span>
+              </div>
+            </div>
+            <p style={{ color: '#fff', marginBottom: '30px', fontSize: '1.1rem' }}>
+              Upgrade to continue using SPECTER AI
+            </p>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  setShowUpgradeModal(false);
+                  setCurrentView('profile');
+                }}
+                style={{
+                  background: '#fbbf24',
+                  color: '#000',
+                  border: 'none',
+                  padding: '15px 30px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '1rem'
+                }}
+              >
+                View Plans & Upgrade
+              </button>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                style={{
+                  background: 'transparent',
+                  color: '#888',
+                  border: '1px solid #444',
+                  padding: '15px 30px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Voice Assistant */}
       <VoiceAssistant />
@@ -624,6 +1118,8 @@ export function LegalServicesPanel({ isOpen, onClose }: { isOpen: boolean; onClo
           </div>
         </div>
       </div>
-    </div>
+
+
+    </div >
   );
 }

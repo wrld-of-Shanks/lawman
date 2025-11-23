@@ -130,7 +130,12 @@ async def create_user(email: str, password: str, full_name: str):
         "is_verified": False,
         "is_active": True,
         "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
+        "updated_at": datetime.utcnow(),
+        "usage": {
+            "questions_asked": 0,
+            "documents_uploaded": 0,
+            "last_reset": datetime.utcnow()
+        }
     }
     result = await users_collection.insert_one(user_doc)
     return str(result.inserted_id)
@@ -324,7 +329,15 @@ async def login(user_data: UserLogin):
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user": {
+            "_id": str(user["_id"]),
+            "email": user["email"],
+            "full_name": user["full_name"],
+            "is_verified": user.get("is_verified", False),
+            "subscription": user.get("subscription", {}),
+            "usage": user.get("usage", {})
+        }
     }
 
 @auth_router.post("/refresh-token", response_model=Token)

@@ -16,11 +16,15 @@ try:
     from .embed_store import add_chunks_to_db
     from .auth_mongo import auth_router
     from .legal_api import legal_router
+    from .contact_service import contact_router
+    from .payment_api import payment_router
 except ImportError:
     from doc_parser import parse_and_chunk
     from embed_store import add_chunks_to_db
     from auth_mongo import auth_router
     from legal_api import legal_router
+    from contact_service import contact_router
+    from payment_api import payment_router
 
 app = FastAPI(title="SPECTER Legal Assistant API", version="1.0.0")
 
@@ -48,6 +52,8 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 app.include_router(legal_router, prefix="/legal", tags=["legal"])
+app.include_router(contact_router, prefix="/api", tags=["contact"])
+app.include_router(payment_router, prefix="/payment", tags=["payment"])
 
 
 
@@ -60,14 +66,73 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+# Usage stats endpoint
+@app.get("/usage")
+async def get_usage(request: Request):
+    try:
+        from auth_mongo import get_current_user
+        from usage_tracker import get_usage_stats
+        from fastapi.security import HTTPAuthorizationCredentials
+        
+        # Get authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Authentication required"}
+            )
+        
+        # Get current user
+        token = auth_header.replace("Bearer ", "")
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        user = await get_current_user(credentials)
+        
+        # Get usage stats
+        stats = await get_usage_stats(user)
+        
+        return stats
+        
+    except HTTPException as he:
+        return JSONResponse(
+            status_code=he.status_code,
+            content={"error": he.detail}
+        )
+    except Exception as e:
+        logging.error(f"Usage stats error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
+
+
 # Basic chat endpoint
 @app.post("/chat")
 async def chat_endpoint(request: Request):
     try:
+        from auth_mongo import get_current_user
+        from usage_tracker import enforce_question_limit, increment_question_count
+        from fastapi.security import HTTPAuthorizationCredentials
+        
         data = await request.json()
         user_message = data.get("message", "")
-        user_id = data.get("user_id", None)
         target_lang = data.get("target_lang", "english")
+        
+        # Get authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Authentication required"}
+            )
+        
+        # Get current user
+        token = auth_header.replace("Bearer ", "")
+        from fastapi.security import HTTPAuthorizationCredentials
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        user = await get_current_user(credentials)
+        
+        # Check usage limits
+        await enforce_question_limit(user)
         
         if not user_message.strip():
             return JSONResponse(
@@ -75,13 +140,20 @@ async def chat_endpoint(request: Request):
                 content={"error": "Message cannot be empty"}
             )
         
-        
         # Use the Vector RAG system for semantic search
         from chat_engine_rag import answer_query_with_rag
-        response = answer_query_with_rag(user_message, user_id=user_id)
+        response = answer_query_with_rag(user_message, user_id=str(user["_id"]))
+        
+        # Increment usage count
+        await increment_question_count(str(user["_id"]))
         
         return response
         
+    except HTTPException as he:
+        return JSONResponse(
+            status_code=he.status_code,
+            content={"error": he.detail}
+        )
     except Exception as e:
         logging.error(f"Chat endpoint error: {e}")
         return JSONResponse(
@@ -91,13 +163,51 @@ async def chat_endpoint(request: Request):
 
 # File upload endpoint
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    import os
-    os.makedirs("data/processed", exist_ok=True)
-    content = await file.read()
-    with open(f"data/processed/{file.filename}", "wb") as f:
-        f.write(content)
-    return {"filename": file.filename, "status": "uploaded"}
+async def upload_file(request: Request, file: UploadFile = File(...)):
+    try:
+        from auth_mongo import get_current_user
+        from usage_tracker import enforce_upload_limit, increment_upload_count
+        from fastapi.security import HTTPAuthorizationCredentials
+        
+        # Get authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Authentication required"}
+            )
+        
+        # Get current user
+        token = auth_header.replace("Bearer ", "")
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        user = await get_current_user(credentials)
+        
+        # Check upload limits
+        await enforce_upload_limit(user)
+        
+        # Process upload
+        import os
+        os.makedirs("data/processed", exist_ok=True)
+        content = await file.read()
+        with open(f"data/processed/{file.filename}", "wb") as f:
+            f.write(content)
+        
+        # Increment usage count
+        await increment_upload_count(str(user["_id"]))
+        
+        return {"filename": file.filename, "status": "uploaded"}
+        
+    except HTTPException as he:
+        return JSONResponse(
+            status_code=he.status_code,
+            content={"error": he.detail}
+        )
+    except Exception as e:
+        logging.error(f"Upload endpoint error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error"}
+        )
 
 class LawyerContactRequest(BaseModel):
     name: str

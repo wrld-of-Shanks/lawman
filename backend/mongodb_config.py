@@ -5,7 +5,7 @@ import asyncio
 from typing import Optional
 
 # MongoDB Configuration
-MONGODB_URL = os.getenv("MONGODB_URL") or os.getenv("MONGO_URL") or "mongodb://localhost:27017"
+MONGODB_URL = os.getenv("MONGODB_URI") or os.getenv("MONGODB_URL") or os.getenv("MONGO_URL") or "mongodb://localhost:27017"
 DATABASE_NAME = os.getenv("DATABASE_NAME", "specter_legal")
 
 # Global variables for database connections

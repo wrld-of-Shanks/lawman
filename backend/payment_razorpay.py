@@ -9,8 +9,8 @@ import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-# Load environment variables from parent directory
-load_dotenv('../.env')
+# Load environment variables
+load_dotenv()
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_test_your_key_id')
@@ -72,10 +72,14 @@ def create_payment_order(plan: str, user_id: str, user_email: str, user_name: st
     plan_details = SUBSCRIPTION_PLANS[plan]
     
     # Create order data
+    # Receipt must be max 40 chars - use short hash of user_id + timestamp
+    timestamp = int(datetime.now().timestamp())
+    receipt_hash = hashlib.md5(f"{user_id}{timestamp}".encode()).hexdigest()[:8]
+    
     order_data = {
         'amount': plan_details['amount'],
         'currency': plan_details['currency'],
-        'receipt': f"specter_{plan}_{user_id}_{int(datetime.now().timestamp())}",
+        'receipt': f"{plan}_{receipt_hash}_{timestamp}",
         'notes': {
             'user_id': user_id,
             'plan': plan,
@@ -84,9 +88,13 @@ def create_payment_order(plan: str, user_id: str, user_email: str, user_name: st
         }
     }
     
+    
     try:
         # Create order with Razorpay
+        print(f"Creating Razorpay order with data: {order_data}")
+        print(f"Using Key ID: {RAZORPAY_KEY_ID[:10]}...")
         order = razorpay_client.order.create(data=order_data)
+        print(f"Order created successfully: {order['id']}")
         
         return {
             'order_id': order['id'],
@@ -98,6 +106,9 @@ def create_payment_order(plan: str, user_id: str, user_email: str, user_name: st
         }
     
     except Exception as e:
+        print(f"Razorpay order creation failed: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
 
 def verify_payment_signature(order_id: str, payment_id: str, signature: str) -> bool:
@@ -164,7 +175,7 @@ def get_subscription_limits(plan: str) -> Dict:
     Get usage limits for a subscription plan
     """
     limits = {
-        'free': {'questions': 10, 'solutions': 3, 'uploads': 0},
+        'free': {'questions': 3, 'solutions': 1, 'uploads': 1},
         'lite': {'questions': 50, 'solutions': 25, 'uploads': 3},
         'specter': {'questions': -1, 'solutions': -1, 'uploads': -1}  # -1 means unlimited
     }
