@@ -1,0 +1,23 @@
+{
+  "lawman-legal-max-accuracy": {
+    "accuracy_score": 0.5961796652421651,
+    "response_time": 71.82258814573288,
+    "token_efficiency": 0.3,
+    "legal_accuracy": 0.7000000000000001,
+    "overall_score": 0.5202270998741807
+  },
+  "lawman-legal-v2": {
+    "accuracy_score": 0.569096866096866,
+    "response_time": 64.2388593196869,
+    "token_efficiency": 0.3,
+    "legal_accuracy": 0.74,
+    "overall_score": 0.5282618885915917
+  },
+  "qwen2.5:7b-instruct": {
+    "accuracy_score": 0.624937321937322,
+    "response_time": 70.04922919273376,
+    "token_efficiency": 0.3,
+    "legal_accuracy": 0.6599999999999999,
+    "overall_score": 0.512888671386148
+  }
+}
