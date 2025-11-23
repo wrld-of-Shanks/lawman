@@ -10,21 +10,13 @@ from email.mime.text import MIMEText
 import sqlite3
 import logging
 
-# Robust intra-package imports (works with both `backend.main` and `main` entrypoints)
-try:
-    from .doc_parser import parse_and_chunk
-    from .embed_store import add_chunks_to_db
-    from .auth_mongo import auth_router
-    from .legal_api import legal_router
-    from .contact_service import contact_router
-    from .payment_api import payment_router
-except ImportError:
-    from doc_parser import parse_and_chunk
-    from embed_store import add_chunks_to_db
-    from auth_mongo import auth_router
-    from legal_api import legal_router
-    from contact_service import contact_router
-    from payment_api import payment_router
+# Standard imports for Docker/Gunicorn execution
+from doc_parser import parse_and_chunk
+from embed_store import add_chunks_to_db
+from auth_mongo import auth_router
+from legal_api import legal_router
+from contact_service import contact_router
+from payment_api import payment_router
 
 app = FastAPI(title="SPECTER Legal Assistant API", version="1.0.0")
 

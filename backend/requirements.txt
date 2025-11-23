@@ -16,3 +16,4 @@ python-jose[cryptography]
 gunicorn
 pytesseract
 pdf2image
+PyPDF2
