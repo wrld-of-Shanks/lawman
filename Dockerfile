@@ -12,7 +12,7 @@ WORKDIR /app
 # Copy requirements first to leverage Docker cache
 COPY backend/requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies (Updated: 2025-11-24)
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the backend code
