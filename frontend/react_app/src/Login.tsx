@@ -222,6 +222,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
                 }}>
                     Created by <span style={{ fontStyle: 'italic' }}>SPECTER AI</span>
                 </div>
+
+                {/* Debug Info - Temporary */}
+                <div style={{
+                    marginTop: '20px',
+                    textAlign: 'center',
+                    fontSize: '0.7rem',
+                    color: 'rgba(255,255,255,0.3)'
+                }}>
+                    API: {config.API_BASE_URL}
+                </div>
             </div>
         </div>
     );
