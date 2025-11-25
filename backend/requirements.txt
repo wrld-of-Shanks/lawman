@@ -11,6 +11,7 @@ chromadb
 sentence-transformers
 python-multipart
 passlib[bcrypt]
+bcrypt==4.2.1
 pyjwt
 python-jose[cryptography]
 gunicorn
