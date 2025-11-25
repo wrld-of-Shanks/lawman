@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 class VectorRAGTrainer:
     """Production-grade RAG system with vector embeddings"""
     
-    def __init__(self, model_name="all-mpnet-base-v2", similarity_threshold=0.75):
+    def __init__(self, model_name="all-MiniLM-L6-v2", similarity_threshold=0.65):
         """
         Initialize the RAG system
         
         Args:
-            model_name: Sentence transformer model name
-            similarity_threshold: Minimum similarity score for accepting answers (0.70-0.80 recommended)
+            model_name: Sentence transformer model name (default: all-MiniLM-L6-v2 for memory efficiency)
+            similarity_threshold: Minimum similarity score for accepting answers
         """
         logger.info(f"Initializing Vector RAG with model: {model_name}")
         self.model = SentenceTransformer(model_name)
@@ -38,6 +38,15 @@ class VectorRAGTrainer:
             name="indian_law_faq",
             metadata={"description": "Indian Law FAQ with vector embeddings"}
         )
+        
+        # Auto-train if empty
+        if self.collection.count() == 0:
+            logger.info("Collection is empty. Starting auto-training...")
+            try:
+                dataset = self.build_dataset()
+                self.train(dataset)
+            except Exception as e:
+                logger.error(f"Failed to auto-train: {e}")
         
         logger.info(f"ChromaDB collection initialized with {self.collection.count()} documents")
     

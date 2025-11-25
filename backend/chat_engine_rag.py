@@ -19,8 +19,8 @@ def get_rag_system():
     if _rag_system is None:
         logger.info("Initializing Vector RAG system...")
         _rag_system = VectorRAGTrainer(
-            model_name="all-mpnet-base-v2",
-            similarity_threshold=0.70  # Lowered to 70% for better coverage
+            model_name="all-MiniLM-L6-v2",
+            similarity_threshold=0.65
         )
     return _rag_system
 
