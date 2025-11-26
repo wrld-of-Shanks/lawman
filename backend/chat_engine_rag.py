@@ -1,108 +1,69 @@
 """
-Enhanced Chat Engine with Production-Grade Vector RAG
-Integrates the trained vector database for semantic search
+Lightweight Chat Engine using Fuzzy Matching
+Optimized for Render Free Tier (Low Memory Usage)
 """
 
 import logging
 from typing import Dict
-from vector_rag_trainer import VectorRAGTrainer
+from comprehensive_legal_db import get_comprehensive_legal_info, COMPREHENSIVE_LEGAL_FAQ
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize the Vector RAG system (singleton)
-_rag_system = None
-
-def get_rag_system():
-    """Get or create the RAG system singleton"""
-    global _rag_system
-    if _rag_system is None:
-        logger.info("Initializing Vector RAG system...")
-        _rag_system = VectorRAGTrainer(
-            model_name="all-MiniLM-L6-v2",
-            similarity_threshold=0.65
-        )
-    return _rag_system
-
 def answer_query_with_rag(query: str, user_id: str = None, mode: str = "default") -> Dict:
     """
-    Enhanced answer function using Hybrid Search (Keyword Expansion + Vector RAG)
-    
-    Args:
-        query: User's question
-        user_id: Optional user ID
-        mode: Query mode
-        
-    Returns:
-        Dict with answer and metadata
+    Get answer using lightweight fuzzy matching instead of heavy Vector RAG.
+    This prevents OOM crashes on free tier servers.
     """
     try:
-        # Pre-process query to expand abbreviations
-        # This fixes issues where "DL" doesn't match "Driving License" well in vector space
-        from comprehensive_legal_db import get_comprehensive_legal_info
+        logger.info(f"Processing query: {query}")
         
-        # Simple keyword expansion
-        expanded_query = query
-        lower_query = query.lower()
+        # 1. Try exact/keyword match from comprehensive DB
+        answer = get_comprehensive_legal_info(query)
         
-        # Map common abbreviations
-        abbreviations = {
-            "dl": "driving license",
-            "fir": "first information report",
-            "pil": "public interest litigation",
-            "rti": "right to information",
-            "pf": "provident fund",
-            "gst": "goods and services tax",
-            "posh": "prevention of sexual harassment",
-            "ipc": "indian penal code",
-            "crpc": "criminal procedure code"
+        if answer:
+            return {
+                "answer": answer,
+                "sources": ["Legal Database"],
+                "confidence": 0.9,
+                "matched_question": query
+            }
+            
+        # 2. Fuzzy Search (Fallback)
+        # Split query into words and find best matching key in DB
+        query_words = set(query.lower().split())
+        best_match = None
+        max_score = 0
+        
+        for key, value in COMPREHENSIVE_LEGAL_FAQ.items():
+            key_words = set(key.replace('_', ' ').split())
+            
+            # Calculate overlap score
+            overlap = len(query_words.intersection(key_words))
+            if overlap > max_score:
+                max_score = overlap
+                best_match = value
+        
+        if best_match and max_score > 0:
+            return {
+                "answer": best_match,
+                "sources": ["Legal Database (Fuzzy Match)"],
+                "confidence": 0.7,
+                "matched_question": query
+            }
+
+        # 3. No match found
+        return {
+            "answer": "I couldn't find specific information on that. Please try asking about topics like: bail, divorce, FIR, driving license, property, or consumer rights.",
+            "sources": [],
+            "confidence": 0.0,
+            "matched_question": None
         }
-        
-        for abbr, full_form in abbreviations.items():
-            # Check for standalone abbreviation (surrounded by spaces or start/end)
-            import re
-            pattern = r'\b' + re.escape(abbr) + r'\b'
-            if re.search(pattern, query, re.IGNORECASE):
-                expanded_query = re.sub(pattern, full_form, expanded_query, flags=re.IGNORECASE)
-                logger.info(f"Expanded query: '{query}' -> '{expanded_query}'")
-        
-        # Get RAG system
-        rag = get_rag_system()
-        
-        # Get answer using vector similarity search with expanded query
-        result = rag.get_answer(expanded_query, top_k=3)
-        
-        # Format response
-        response = {
-            "answer": result['answer'],
-            "sources": result['sources'],
-            "confidence": result['similarity'],
-            "matched_question": result.get('matched_question')
-        }
-        
-        logger.info(f"Query: '{query}' (Expanded: '{expanded_query}') | Confidence: {result['similarity']:.2%}")
-        
-        return response
         
     except Exception as e:
-        logger.error(f"Error in RAG query: {str(e)}")
-        
-        # Fallback to comprehensive legal database
-        try:
-            from comprehensive_legal_db import get_comprehensive_legal_info
-            legal_info = get_comprehensive_legal_info(query)
-            if legal_info:
-                return {
-                    "answer": legal_info,
-                    "sources": ["Comprehensive Legal Database"],
-                    "confidence": 0.8
-                }
-        except:
-            pass
-        
-        # Final fallback
+        logger.error(f"Error in chat engine: {str(e)}")
         return {
-            "answer": "I encountered an error processing your question. Please try rephrasing or ask about specific Indian legal topics like bail, divorce, FIR, driving license, property, employment, or consumer rights.",
+            "answer": "An error occurred. Please try asking about a specific legal topic.",
             "sources": [],
             "confidence": 0.0
         }
