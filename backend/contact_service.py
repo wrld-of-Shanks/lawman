@@ -1,8 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
 from dotenv import load_dotenv
 import logging
@@ -81,47 +78,85 @@ async def contact_lawyer(request: LawyerContactRequest):
         </html>
         """
         
-        # Try to send via SMTP (Gmail)
+        # Try to send email notification
         try:
-            # Get SMTP credentials from environment
-            smtp_email = os.getenv("SMTP_USER", admin_email)
-            smtp_password = os.getenv("SMTP_PASS")
+            import requests
             
-            if smtp_password:
-                msg = MIMEMultipart('alternative')
-                msg['Subject'] = subject
-                msg['From'] = smtp_email
-                msg['To'] = admin_email
-                msg['Reply-To'] = request.email
-                
-                html_part = MIMEText(html_content, 'html')
-                msg.attach(html_part)
-                
-                # Send via Gmail SMTP
-                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                    server.login(smtp_email, smtp_password)
-                    server.send_message(msg)
-                    
-                logger.info(f"Lawyer contact request sent from {request.email}")
-                return {
-                    "success": True,
-                    "message": "Your request has been sent successfully! We'll contact you within 24 hours."
-                }
-            else:
-                # Fallback: Log the request
-                logger.warning("SMTP not configured. Logging request instead.")
-                logger.info(f"Lawyer Request: {request.dict()}")
-                
-                return {
-                    "success": True,
-                    "message": "Your request has been received! We'll contact you soon.",
-                    "note": "Email service not configured - request logged"
+            # Option 1: Try webhook notification (if configured)
+            webhook_url = os.getenv("WEBHOOK_URL")
+            
+            if webhook_url:
+                # Send to webhook (e.g., Discord, Slack, or custom endpoint)
+                payload = {
+                    "content": f"🔔 **New Lawyer Consultation Request**\n\n"
+                               f"**Name:** {request.name}\n"
+                               f"**Email:** {request.email}\n"
+                               f"**Phone:** {request.phone}\n"
+                               f"**Type:** {request.lawyer_type}\n"
+                               f"**Budget:** {request.budget}\n"
+                               f"**Description:** {request.case_description}"
                 }
                 
-        except Exception as smtp_error:
-            logger.error(f"SMTP error: {smtp_error}")
-            # Fallback to logging
-            logger.info(f"Lawyer Request (fallback): {request.dict()}")
+                response = requests.post(webhook_url, json=payload, timeout=5)
+                
+                if response.status_code == 200:
+                    logger.info(f"Webhook notification sent for {request.email}")
+                    return {
+                        "success": True,
+                        "message": "Your request has been sent successfully! We'll contact you within 24 hours."
+                    }
+            
+            # Option 2: Email via SendGrid/Mailgun API (if configured)
+            sendgrid_key = os.getenv("SENDGRID_API_KEY")
+            
+            if sendgrid_key:
+                # Use SendGrid HTTP API
+                response = requests.post(
+                    "https://api.sendgrid.com/v3/mail/send",
+                    headers={
+                        "Authorization": f"Bearer {sendgrid_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "personalizations": [{"to": [{"email": admin_email}]}],
+                        "from": {"email": "noreply@specter.app"},
+                        "subject": subject,
+                        "content": [{"type": "text/html", "value": html_content}]
+                    },
+                    timeout=10
+                )
+                
+                if response.status_code == 202:
+                    logger.info(f"SendGrid email sent for {request.email}")
+                    return {
+                        "success": True,
+                        "message": "Your request has been sent successfully! We'll contact you within 24 hours."
+                    }
+            
+            # Fallback: Log the request and send email to admin manually
+            logger.warning("⚠️ EMAIL SERVICE NOT CONFIGURED - REQUEST LOGGED BELOW:")
+            logger.info(f"""
+            ═══════════════════════════════════════════════════════
+            📧 NEW LAWYER CONSULTATION REQUEST
+            ═══════════════════════════════════════════════════════
+            Name: {request.name}
+            Email: {request.email}
+            Phone: {request.phone}
+            Lawyer Type: {request.lawyer_type}
+            Budget: {request.budget}
+            Description: {request.case_description}
+            ═══════════════════════════════════════════════════════
+            """)
+            
+            return {
+                "success": True,
+                "message": "Your request has been received! We'll contact you within 24 hours."
+            }
+                
+        except Exception as error:
+            logger.error(f"Email service error: {error}")
+            # Always log the request so you don't lose it
+            logger.info(f"Lawyer Request (logged): {request.dict()}")
             return {
                 "success": True,
                 "message": "Your request has been received! We'll contact you soon."
