@@ -144,7 +144,30 @@ body {
 
 @media (max-width: 480px) {
   .nav-center .nav-title {
+    display: block;
+    /* Show title on mobile */
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .nav-left .logo {
     display: none;
+    /* Hide logo text to center title */
+  }
+
+  .subscription-btn {
+    display: none !important;
+    /* Hide subscription button on mobile */
+  }
+
+  .lang-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    background: #111 !important;
+    border: 1px solid #fbbf24 !important;
+    border-radius: 6px !important;
+    color: #fbbf24 !important;
+    height: 32px;
   }
 }
 

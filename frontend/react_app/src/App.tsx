@@ -732,7 +732,7 @@ function App() {
 
         <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <button
-            className="nav-btn"
+            className="nav-btn subscription-btn"
             onClick={() => setCurrentView(user ? 'profile' : 'login')}
             style={{
               background: '#1a1a1a',
