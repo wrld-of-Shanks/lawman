@@ -1054,18 +1054,7 @@ export function LegalServicesPanel({ isOpen, onClose }: { isOpen: boolean; onClo
   return (
     <div className="backdrop" onClick={onClose}>
       <div
-        className="bot-interface"
-        style={{
-          maxWidth: '95vw',
-          width: '1400px',
-          height: '90vh',
-          margin: '40px auto',
-          background: 'rgba(17,17,17,0.95)',
-          padding: 0,
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
+        className="legal-services-modal bot-interface"
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111', borderBottom: '1px solid #333' }}>
