@@ -281,6 +281,27 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
+### Copyright Notice
+
+**Copyright © 2025 Shankar M Darur. All Rights Reserved.**
+
+This software and associated documentation files (the "Software") are protected by copyright law. The Software is licensed, not sold. By using this Software, you agree to the terms of the MIT License.
+
+**Permissions:**
+- ✅ Commercial use
+- ✅ Modification
+- ✅ Distribution
+- ✅ Private use
+
+**Conditions:**
+- 📋 License and copyright notice must be included
+- 📝 Attribution to original author required
+
+**Limitations:**
+- ❌ No warranty provided
+- ❌ Author not liable for damages
+- ❌ No trademark rights granted
+
 ## 🙏 **Acknowledgments**
 
 - **Indian Legal System** for comprehensive law coverage
@@ -293,7 +314,9 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 **⭐ Star this repository if you find it helpful!**
 
-[🏠 Homepage](https://specter-legal-assistant.netlify.app) • [📖 Documentation](https://github.com/wrld-of-Shanks/lawman/wiki) • [🐛 Report Bug](https://github.com/wrld-of-Shanks/lawman/issues) • [💡 Request Feature](https://github.com/wrld-of-Shanks/lawman/discussions)
+**Copyright © 2025 Shankar M Darur | Licensed under MIT License**
+
+[🏠 Homepage](https://shanksd.netlify.app) • [📖 Documentation](https://github.com/wrld-of-Shanks/lawman/wiki) • [🐛 Report Bug](https://github.com/wrld-of-Shanks/lawman/issues) • [💡 Request Feature](https://github.com/wrld-of-Shanks/lawman/discussions)
 
 </div>
 
