@@ -1,6 +1,6 @@
 # 🏛️ SPECTER Legal Assistant
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![React 18](https://img.shields.io/badge/react-18+-61DAFB.svg)](https://reactjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
@@ -279,28 +279,33 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📜 **License**
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is **proprietary software** - see the [LICENSE](LICENSE) file for details.
 
 ### Copyright Notice
 
 **Copyright © 2025 Shankar M Darur. All Rights Reserved.**
 
-This software and associated documentation files (the "Software") are protected by copyright law. The Software is licensed, not sold. By using this Software, you agree to the terms of the MIT License.
+This software and associated documentation files (the "Software") are proprietary and confidential. The Software is licensed, not sold.
 
-**Permissions:**
-- ✅ Commercial use
-- ✅ Modification
-- ✅ Distribution
-- ✅ Private use
+**You MAY:**
+- ✅ View the source code for educational purposes
+- ✅ Use for personal, non-commercial learning
 
-**Conditions:**
-- 📋 License and copyright notice must be included
-- 📝 Attribution to original author required
+**You MAY NOT (without written permission):**
+- ❌ Use for commercial purposes
+- ❌ Modify or create derivative works
+- ❌ Distribute or sell copies
+- ❌ Deploy on public servers
+- ❌ Remove copyright notices
 
-**Limitations:**
-- ❌ No warranty provided
-- ❌ Author not liable for damages
-- ❌ No trademark rights granted
+**Commercial Licensing:**
+For commercial use, modification rights, or redistribution, please contact:
+📧 shankardarur158@gmail.com
+
+**Disclaimer:**
+- ⚠️ No warranty provided
+- ⚠️ Author not liable for damages
+- ⚠️ Use at your own risk
 
 ## 🙏 **Acknowledgments**
 
@@ -314,9 +319,9 @@ This software and associated documentation files (the "Software") are protected 
 
 **⭐ Star this repository if you find it helpful!**
 
-**Copyright © 2025 Shankar M Darur | Licensed under MIT License**
+**Copyright © 2025 Shankar M Darur | Proprietary Software - All Rights Reserved**
 
-[🏠 Homepage](https://shanksd.netlify.app) • [📖 Documentation](https://github.com/wrld-of-Shanks/lawman/wiki) • [🐛 Report Bug](https://github.com/wrld-of-Shanks/lawman/issues) • [💡 Request Feature](https://github.com/wrld-of-Shanks/lawman/discussions)
+[🏠 Homepage](https://shanksd.netlify.app) • [📧 Contact](mailto:shankardarur158@gmail.com) • [🐛 Report Bug](https://github.com/wrld-of-Shanks/lawman/issues)
 
 </div>
 
