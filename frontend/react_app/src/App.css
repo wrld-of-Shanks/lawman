@@ -133,6 +133,13 @@ body {
   .nav-right {
     gap: 6px;
   }
+
+  .lang-btn {
+    padding: 6px 10px !important;
+    font-size: 0.8rem !important;
+    background: transparent !important;
+    border: none !important;
+  }
 }
 
 @media (max-width: 480px) {

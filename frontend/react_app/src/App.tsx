@@ -750,7 +750,7 @@ function App() {
 
           <div style={{ position: 'relative' }}>
             <button
-              className="nav-btn"
+              className="nav-btn lang-btn"
               onClick={() => setShowLangs(!showLangs)}
               style={{
                 background: '#1a1a1a',
