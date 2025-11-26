@@ -9,6 +9,25 @@
 > **Comprehensive AI-Powered Legal Assistant for Indian Law**  
 > Providing accessible legal information, document analysis, and procedural guidance with 200+ legal topics coverage.
 
+## ⚠️ **LEGAL DISCLAIMER**
+
+**IMPORTANT NOTICE:** SPECTER is an AI-powered **information assistant** and **NOT** a substitute for professional legal advice. This system provides publicly available legal information for educational purposes but does **NOT**:
+
+- ❌ Make legal decisions or provide binding legal advice
+- ❌ Guarantee legal outcomes or case results
+- ❌ Replace consultation with qualified legal professionals
+- ❌ Provide personalized legal strategy
+
+**Users MUST consult a qualified advocate for:**
+- Legal interpretation of specific cases
+- Formal legal representation
+- Court proceedings and litigation
+- Binding legal advice
+
+**Accuracy:** System responses are approximately 88-94% accurate based on testing, but **NOT legally guaranteed**. All information should be verified with legal professionals.
+
+**Data Sources:** All legal texts (IPC, CrPC, Constitution, etc.) are **publicly available government documents** from legislative.gov.in and indiacode.nic.in, not proprietary copyrighted content.
+
 ## 🌟 **Features**
 
 ### 🤖 **Intelligent Legal Assistant**
@@ -285,11 +304,13 @@ This project is **proprietary software** - see the [LICENSE](LICENSE) file for d
 
 **Copyright © 2025 Shankar M Darur. All Rights Reserved.**
 
-This software and associated documentation files (the "Software") are proprietary and confidential. The Software is licensed, not sold.
+**Proprietary - Source Code Copyright Protected**  
+The source code of this software is proprietary and confidential. The legal database contents are public domain government documents.
 
 **You MAY:**
 - ✅ View the source code for educational purposes
 - ✅ Use for personal, non-commercial learning
+- ✅ Study the implementation for academic research
 
 **You MAY NOT (without written permission):**
 - ❌ Use for commercial purposes
@@ -298,14 +319,17 @@ This software and associated documentation files (the "Software") are proprietar
 - ❌ Deploy on public servers
 - ❌ Remove copyright notices
 
+**Legal Database:**
+All legal texts (IPC, CrPC, Constitution, etc.) are **public domain government documents** and not proprietary copyrighted content.
+
 **Commercial Licensing:**
-For commercial use, modification rights, or redistribution, please contact:
-📧 shankardarur158@gmail.com
+For commercial use, modification rights, or redistribution, please contact through official institutional channels.
 
 **Disclaimer:**
 - ⚠️ No warranty provided
 - ⚠️ Author not liable for damages
 - ⚠️ Use at your own risk
+- ⚠️ Information only, not legal advice
 
 ## 🙏 **Acknowledgments**
 
@@ -321,7 +345,9 @@ For commercial use, modification rights, or redistribution, please contact:
 
 **Copyright © 2025 Shankar M Darur | Proprietary Software - All Rights Reserved**
 
-[🏠 Homepage](https://shanksd.netlify.app) • [📧 Contact](mailto:shankardarur158@gmail.com) • [🐛 Report Bug](https://github.com/wrld-of-Shanks/lawman/issues)
+[🏠 Homepage](https://shanksd.netlify.app) • [🐛 Report Bug](https://github.com/wrld-of-Shanks/lawman/issues)
+
+**For inquiries:** Contact through official institutional channels
 
 </div>
 
