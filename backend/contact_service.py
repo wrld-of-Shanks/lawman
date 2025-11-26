@@ -84,8 +84,8 @@ async def contact_lawyer(request: LawyerContactRequest):
         # Try to send via SMTP (Gmail)
         try:
             # Get SMTP credentials from environment
-            smtp_email = os.getenv("SMTP_EMAIL", admin_email)
-            smtp_password = os.getenv("SMTP_PASSWORD")
+            smtp_email = os.getenv("SMTP_USER", admin_email)
+            smtp_password = os.getenv("SMTP_PASS")
             
             if smtp_password:
                 msg = MIMEMultipart('alternative')
