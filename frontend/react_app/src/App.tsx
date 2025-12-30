@@ -1161,7 +1161,6 @@ export function FormattedResponse({ text }: { text: string }) {
   if (!text) return null;
 
   // Clean text for display
-  const cleanText = text.replace(/\*\*/g, '');
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
   let listOpen = false;
