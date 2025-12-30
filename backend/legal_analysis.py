@@ -80,34 +80,47 @@ class LegalAnalyzer:
         user_prompt = f"""
         Document Type: {doc_type}
         
-        Please provide a comprehensive legal summary of the following document.
+        Please provide a highly detailed and professional legal summary of the following document. 
+        Your goal is to provide a summary that is so clear and comprehensive that a person could understand the entire legal situation without reading the full text.
         
-        Structure your response as follows:
+        Structure your response with these exact headers:
         
-        **EXECUTIVE SUMMARY**
-        (200-300 words): A clear, professional summary of the document's purpose and key content.
+        **1. EXECUTIVE SUMMARY**
+        Provide a 3-4 paragraph overview of the document's purpose, the parties involved, and the overall legal context.
         
-        **KEY ENTITIES**
-        - Parties: [List all parties with their roles]
-        - Dates: [Important dates mentioned]
-        - Amounts: [Any monetary values]
-        - Locations: [Relevant addresses or jurisdictions]
-        - Reference Numbers: [Case numbers, agreement numbers, etc.]
+        **2. KEY PARTIES & ROLES**
+        - [Party Name]: [Detailed Role and Identification]
+        - [Party Name]: [Detailed Role and Identification]
         
-        **IMPORTANT CLAUSES/FACTS**
-        - [Bullet point 1: Critical legal obligation or fact]
-        - [Bullet point 2: Critical legal obligation or fact]
-        - [Continue for all critical points]
+        **3. CRITICAL DATES & DEADLINES**
+        - [Date]: [Significance of this date]
+        - [Date]: [Significance of this date]
         
-        **KEY OBLIGATIONS**
-        - [List main obligations of each party]
+        **4. FINANCIAL TERMS & OBLIGATIONS**
+        - [Amount]: [Description of payment, penalty, or consideration]
+        - [Terms]: [Payment schedules or financial conditions]
         
-        **VALIDITY & COMPLIANCE**
-        - [Note any validity periods, compliance requirements, or legal formalities mentioned]
+        **5. IMPORTANT CLAUSES & LEGAL PROVISIONS**
+        - [Clause Name]: [Detailed explanation of the clause and its impact]
+        - [Clause Name]: [Detailed explanation of the clause and its impact]
+        
+        **6. RIGHTS & OBLIGATIONS**
+        - [Party A's Rights]: [List of rights]
+        - [Party A's Obligations]: [List of obligations]
+        - [Party B's Rights]: [List of rights]
+        - [Party B's Obligations]: [List of obligations]
+        
+        **7. VALIDITY, RENEWAL & TERMINATION**
+        - [Validity]: [How long is this document valid?]
+        - [Renewal]: [Terms for renewal]
+        - [Termination]: [How can this be ended?]
+        
+        **8. LEGAL COMPLIANCE & FORMALITIES**
+        - [Compliance]: [Does it meet legal standards?]
+        - [Formalities]: [Are signatures, stamps, or notarization present/required?]
         
         Document Text:
-        {text[:10000]} 
-        (Text truncated if too long)
+        {text[:12000]} 
         """
         
         try:

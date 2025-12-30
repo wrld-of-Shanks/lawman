@@ -245,8 +245,33 @@ function App() {
 
     if (analysisResult.type === 'summarize') {
       return (
-        <div className="summary-view">
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <div className="summary-view" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            borderBottom: '1px solid #333',
+            paddingBottom: '10px'
+          }}>
+            <h3 style={{ margin: 0, color: '#fbbf24' }}>📝 Document Summary Preview</h3>
+            <span style={{ fontSize: '0.8rem', color: '#888' }}>Read below before downloading</span>
+          </div>
+
+          <div className="summary-content-box" style={{
+            background: '#111',
+            padding: '25px',
+            borderRadius: '12px',
+            border: '1px solid #333',
+            marginBottom: '20px',
+            maxHeight: '600px',
+            overflowY: 'auto',
+            lineHeight: '1.6'
+          }}>
+            <FormattedResponse text={analysisResult.summary} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
             <button
               className="download-btn"
               onClick={() => handleDownload(analysisResult.summary, `Summary_${docType.replace(/\s+/g, '_')}.txt`)}
@@ -254,26 +279,59 @@ function App() {
                 background: '#fbbf24',
                 color: '#000',
                 border: 'none',
-                padding: '8px 16px',
-                borderRadius: '6px',
+                padding: '12px 24px',
+                borderRadius: '8px',
                 cursor: 'pointer',
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '10px',
+                fontSize: '1rem',
+                boxShadow: '0 4px 12px rgba(251, 191, 36, 0.2)',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(251, 191, 36, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.2)';
               }}
             >
-              <span>📥</span> Download Summary
+              <span>📥</span> Download Complete Summary (.txt)
             </button>
           </div>
-          <FormattedResponse text={analysisResult.summary} />
         </div>
       );
     }
     if (analysisResult.type === 'translate') {
       return (
         <div className="translation-view">
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            borderBottom: '1px solid #333',
+            paddingBottom: '10px'
+          }}>
+            <h3 style={{ margin: 0, color: '#fbbf24' }}>🌐 Document Translation Preview</h3>
+          </div>
+
+          <div className="summary-content-box" style={{
+            background: '#111',
+            padding: '25px',
+            borderRadius: '12px',
+            border: '1px solid #333',
+            marginBottom: '20px',
+            maxHeight: '600px',
+            overflowY: 'auto'
+          }}>
+            <FormattedResponse text={analysisResult.translation} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
             <button
               className="download-btn"
               onClick={() => handleDownload(analysisResult.translation, `Translation_${docType.replace(/\s+/g, '_')}.txt`)}
@@ -281,19 +339,18 @@ function App() {
                 background: '#fbbf24',
                 color: '#000',
                 border: 'none',
-                padding: '8px 16px',
-                borderRadius: '6px',
+                padding: '12px 24px',
+                borderRadius: '8px',
                 cursor: 'pointer',
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '10px'
               }}
             >
-              <span>📥</span> Download Translation
+              <span>📥</span> Download Translation (.txt)
             </button>
           </div>
-          <FormattedResponse text={analysisResult.translation} />
         </div>
       );
     }
@@ -1101,6 +1158,10 @@ function App() {
 export default App;
 
 export function FormattedResponse({ text }: { text: string }) {
+  if (!text) return null;
+
+  // Clean text for display
+  const cleanText = text.replace(/\*\*/g, '');
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
   let listOpen = false;
@@ -1108,44 +1169,71 @@ export function FormattedResponse({ text }: { text: string }) {
 
   const flushList = () => {
     if (listOpen && listItems.length) {
-      elements.push(<ul className="resp-list" style={{ marginTop: 6, marginBottom: 6, paddingLeft: 18 }}>{listItems}</ul>);
+      elements.push(<ul key={`list-${elements.length}`} className="resp-list" style={{ marginTop: 8, marginBottom: 12, paddingLeft: 20 }}>{listItems}</ul>);
     }
     listOpen = false;
     listItems = [];
   };
 
   lines.forEach((raw, idx) => {
-    const line = raw.trim();
+    let line = raw.trim();
     if (!line) {
       flushList();
-      elements.push(<div key={`sp-${idx}`} style={{ height: 6 }} />);
+      elements.push(<div key={`sp-${idx}`} style={{ height: 10 }} />);
       return;
     }
+
+    // Handle Headers (e.g., **1. EXECUTIVE SUMMARY**)
+    if (line.startsWith('**') && line.endsWith('**')) {
+      flushList();
+      const headerText = line.replace(/\*\*/g, '');
+      elements.push(
+        <h3 key={`hd-${idx}`} style={{
+          color: '#fbbf24',
+          marginTop: '20px',
+          marginBottom: '10px',
+          fontSize: '1.1rem',
+          borderLeft: '4px solid #fbbf24',
+          paddingLeft: '10px'
+        }}>
+          {headerText}
+        </h3>
+      );
+      return;
+    }
+
+    // Handle Bullet Points
     if (line.startsWith('- ')) {
       listOpen = true;
-      listItems.push(<li key={`li-${idx}`}>{line.slice(2)}</li>);
+      const content = line.slice(2).replace(/\*\*/g, '');
+      listItems.push(<li key={`li-${idx}`} style={{ marginBottom: 6 }}>{content}</li>);
       return;
     }
+
     flushList();
-    const labels = ['Answer', 'Legal Reference', 'Explanation', 'Next Steps'];
-    const matched = labels.find(l => line.startsWith(l + ':'));
-    if (matched) {
-      const value = line.slice(matched.length + 1).trim();
-      if (matched === 'Next Steps') {
-        elements.push(<div key={`hd-${idx}`} className="resp-line" style={{ fontWeight: 700, marginTop: 4 }}>{matched}:</div>);
-      } else {
-        elements.push(
-          <div key={`ln-${idx}`} className="resp-line" style={{ marginBottom: 4 }}>
-            <span style={{ fontWeight: 700 }}>{matched}:</span> {value}
-          </div>
-        );
+
+    // Handle Bold Text within lines
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    const formattedLine = parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} style={{ color: '#fbbf24' }}>{part.replace(/\*\*/g, '')}</strong>;
       }
-    } else {
-      elements.push(<div key={`tx-${idx}`} className="resp-line" style={{ whiteSpace: 'pre-line' }}>{line}</div>);
-    }
+      return part;
+    });
+
+    elements.push(
+      <div key={`tx-${idx}`} className="resp-line" style={{
+        marginBottom: 8,
+        whiteSpace: 'pre-line',
+        color: '#eee'
+      }}>
+        {formattedLine}
+      </div>
+    );
   });
+
   flushList();
-  return <div className="formatted-response" style={{ lineHeight: 1.55 }}>{elements}</div>;
+  return <div className="formatted-response" style={{ lineHeight: 1.7 }}>{elements}</div>;
 }
 
 export function LegalServicesPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
