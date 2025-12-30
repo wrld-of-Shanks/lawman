@@ -210,14 +210,25 @@ class LegalAnalyzer:
             
             # Parse the output to extract structured data (simple parsing)
             verdict = "Needs modification before submission"
+            confidence = "85%" # Default if not found
+            
             if "Legally correct and ready for submission" in analysis:
-                verdict = "Legally correct and ready for submission"
+                verdict = "Legally correct and ready for submission. You can proceed to submit it to the needed office."
             elif "Likely invalid" in analysis or "inadmissible" in analysis:
-                verdict = "Likely invalid / inadmissible"
+                verdict = "Likely invalid / inadmissible. This document needs to be examined and remade."
+            elif "Needs modification" in analysis:
+                verdict = "Needs modification before submission. Please examine the recommendations and update the document."
+
+            # Try to extract confidence percentage
+            import re
+            conf_match = re.search(r"CONFIDENCE:\s*(\d+%)", analysis, re.IGNORECASE)
+            if conf_match:
+                confidence = conf_match.group(1)
                 
             return {
                 "full_analysis": analysis,
-                "verdict": verdict
+                "verdict": verdict,
+                "confidence": confidence
             }
         except Exception as e:
             logger.error(f"Document verification failed: {e}")

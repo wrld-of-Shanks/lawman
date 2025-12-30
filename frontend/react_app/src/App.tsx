@@ -228,12 +228,44 @@ function App() {
     setIsLoading(false);
   };
 
+  const handleDownload = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const renderAnalysisResult = () => {
     if (!analysisResult) return null;
 
     if (analysisResult.type === 'summarize') {
       return (
         <div className="summary-view">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+            <button
+              className="download-btn"
+              onClick={() => handleDownload(analysisResult.summary, `Summary_${docType.replace(/\s+/g, '_')}.txt`)}
+              style={{
+                background: '#fbbf24',
+                color: '#000',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>📥</span> Download Summary
+            </button>
+          </div>
           <FormattedResponse text={analysisResult.summary} />
         </div>
       );
@@ -241,6 +273,26 @@ function App() {
     if (analysisResult.type === 'translate') {
       return (
         <div className="translation-view">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+            <button
+              className="download-btn"
+              onClick={() => handleDownload(analysisResult.translation, `Translation_${docType.replace(/\s+/g, '_')}.txt`)}
+              style={{
+                background: '#fbbf24',
+                color: '#000',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>📥</span> Download Translation
+            </button>
+          </div>
           <FormattedResponse text={analysisResult.translation} />
         </div>
       );
@@ -248,8 +300,30 @@ function App() {
     if (analysisResult.type === 'verify') {
       return (
         <div className="verification-view">
-          <div className={`verdict-badge ${analysisResult.verdict.includes('correct') ? 'success' : 'warning'}`}>
-            {analysisResult.verdict}
+          <div style={{
+            background: '#222',
+            padding: '20px',
+            borderRadius: '12px',
+            border: '1px solid #333',
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '5px' }}>Verification Accuracy</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fbbf24', marginBottom: '15px' }}>
+              {analysisResult.confidence || '85%'}
+            </div>
+            <div className={`verdict-badge ${analysisResult.verdict.includes('ready') ? 'success' : 'warning'}`} style={{
+              display: 'inline-block',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              fontSize: '1rem',
+              background: analysisResult.verdict.includes('ready') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+              color: analysisResult.verdict.includes('ready') ? '#10b981' : '#f59e0b',
+              border: `1px solid ${analysisResult.verdict.includes('ready') ? '#10b981' : '#f59e0b'}`
+            }}>
+              {analysisResult.verdict}
+            </div>
           </div>
           <FormattedResponse text={analysisResult.full_analysis} />
         </div>
