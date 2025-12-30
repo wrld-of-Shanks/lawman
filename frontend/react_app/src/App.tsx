@@ -194,9 +194,14 @@ function App() {
   const handleAnalyze = async (action: string) => {
     setIsLoading(true);
     try {
-      const resp = await fetch(`${config.API_BASE_URL}/analyze_doc`, {
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const resp = await fetch(`${config.API_BASE_URL}/legal/analyze_doc`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           text: extractedText,
           doc_type: docType,
@@ -204,8 +209,19 @@ function App() {
           target_lang: selectedLanguage
         })
       });
+
+      if (resp.status === 401) {
+        handleLogout();
+        alert("Session expired. Please login again.");
+        return;
+      }
+
       const data = await resp.json();
-      setAnalysisResult({ ...data, type: action });
+      if (resp.ok) {
+        setAnalysisResult({ ...data, type: action });
+      } else {
+        alert(`Analysis failed: ${data.error || data.detail || 'Unknown error'}`);
+      }
     } catch (e) {
       alert("Analysis failed. Please try again.");
     }
@@ -402,11 +418,19 @@ function App() {
                         headers['Authorization'] = `Bearer ${token}`;
                       }
 
-                      const resp = await fetch(`${config.API_BASE_URL}/upload_doc`, {
+                      const resp = await fetch(`${config.API_BASE_URL}/legal/upload_doc`, {
                         method: 'POST',
                         headers,
                         body: form
                       });
+
+                      if (resp.status === 401) {
+                        handleLogout();
+                        setUploadStatus('🔒 Session expired. Please login again.');
+                        setIsLoading(false);
+                        return;
+                      }
+
                       const data = await resp.json();
 
                       if (resp.ok) {
@@ -414,9 +438,12 @@ function App() {
                         setDocType(data.doc_type);
 
                         // Step 2: Analyze immediately
-                        const analyzeResp = await fetch(`${config.API_BASE_URL}/analyze_doc`, {
+                        const analyzeResp = await fetch(`${config.API_BASE_URL}/legal/analyze_doc`, {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': token ? `Bearer ${token}` : ''
+                          },
                           body: JSON.stringify({
                             text: data.text,
                             doc_type: data.doc_type,
@@ -429,8 +456,6 @@ function App() {
                         setUploadStatus("Analysis complete!");
                       } else if (resp.status === 403) {
                         setUploadStatus(`⚠️ ${data.error || 'Upload limit reached. Please upgrade your subscription.'}`);
-                      } else if (resp.status === 401) {
-                        setUploadStatus('🔒 Please login to upload documents.');
                       } else {
                         setUploadStatus(`Upload failed: ${data.detail || data.error || 'server error'}`);
                       }
