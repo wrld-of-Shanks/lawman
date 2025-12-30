@@ -47,6 +47,19 @@ app.include_router(legal_router, prefix="/legal", tags=["legal"])
 app.include_router(contact_router, prefix="/api", tags=["contact"])
 app.include_router(payment_router, prefix="/payment", tags=["payment"])
 
+# Fallback routes for document analysis (to support older frontend versions)
+@app.post("/upload_doc")
+async def upload_doc_fallback(request: Request, file: UploadFile = File(...)):
+    from legal_api import upload_document
+    return await upload_document(request, file)
+
+@app.post("/analyze_doc")
+async def analyze_doc_fallback(request: Request):
+    from legal_api import analyze_document, AnalysisRequest
+    data = await request.json()
+    analysis_request = AnalysisRequest(**data)
+    return await analyze_document(analysis_request)
+
 
 
 # Health check endpoint
