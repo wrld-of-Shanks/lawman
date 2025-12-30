@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Body
+from fastapi import APIRouter, UploadFile, File, HTTPException, Body, Request
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from document_processor import document_processor
 from legal_analysis import legal_analyzer
@@ -18,8 +19,25 @@ async def get_legal_info():
     return {"message": "Legal API endpoint"}
 
 @legal_router.post("/upload_doc")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(request: Request, file: UploadFile = File(...)):
     try:
+        from auth_mongo import get_current_user
+        from usage_tracker import enforce_upload_limit, increment_upload_count
+        
+        # Get authorization header
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            # Get current user
+            token = auth_header.replace("Bearer ", "")
+            credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+            user = await get_current_user(credentials)
+            
+            # Check upload limits
+            await enforce_upload_limit(user)
+        else:
+            # Allow unauthenticated uploads but don't track
+            user = None
+        
         # 1. Save file
         file_path = document_processor.save_upload(file)
         
@@ -34,12 +52,18 @@ async def upload_document(file: UploadFile = File(...)):
         
         if not text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from document. Ensure it is a valid text-based PDF, DOCX, or clear Image.")
+        
+        # Increment usage count if user is authenticated
+        if user:
+            await increment_upload_count(str(user["_id"]))
             
         return {
             "text": text,
             "doc_type": doc_type,
             "filename": file.filename
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

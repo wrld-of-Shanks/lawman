@@ -14,18 +14,58 @@ class LegalAnalyzer:
         pass
 
     def identify_document_type(self, text: str) -> str:
-        """Identify the type of legal document"""
+        """Identify the type of legal document using pattern matching and LLM"""
+        # First try pattern matching for common document types
+        text_lower = text.lower()
+        
+        # Pattern-based identification for faster and more accurate results
+        if "first information report" in text_lower or ("fir" in text_lower[:200] and "police" in text_lower[:500]):
+            return "First Information Report (FIR)"
+        elif "rent agreement" in text_lower or "lease agreement" in text_lower:
+            return "Rent/Lease Agreement"
+        elif "sale deed" in text_lower or "conveyance deed" in text_lower:
+            return "Sale Deed"
+        elif "affidavit" in text_lower[:200]:
+            return "Affidavit"
+        elif "power of attorney" in text_lower:
+            return "Power of Attorney"
+        elif "marriage certificate" in text_lower:
+            return "Marriage Certificate"
+        elif "birth certificate" in text_lower:
+            return "Birth Certificate"
+        elif "cheque" in text_lower and "bounce" in text_lower:
+            return "Cheque Bounce Notice"
+        elif "legal notice" in text_lower[:200]:
+            return "Legal Notice"
+        elif "employment contract" in text_lower or "appointment letter" in text_lower:
+            return "Employment Contract"
+        elif "non-disclosure agreement" in text_lower or ("nda" in text_lower[:200] and "confidential" in text_lower):
+            return "Non-Disclosure Agreement (NDA)"
+        elif "memorandum of understanding" in text_lower or ("mou" in text_lower[:200] and "parties" in text_lower):
+            return "Memorandum of Understanding (MOU)"
+        elif "will" in text_lower[:100] and ("testament" in text_lower or "bequeath" in text_lower):
+            return "Last Will and Testament"
+        elif "petition" in text_lower[:200] and "court" in text_lower[:500]:
+            return "Court Petition"
+        
+        # If pattern matching fails, use LLM
         prompt = f"""
         Analyze the following legal document text and identify its type.
-        Examples: Contract, FIR, Affidavit, Rent Agreement, Sale Deed, Marriage Certificate, Cheque Bounce Notice, Legal Notice, etc.
+        Examples: Contract, FIR, Affidavit, Rent Agreement, Sale Deed, Marriage Certificate, 
+        Cheque Bounce Notice, Legal Notice, Employment Contract, NDA, MOU, Court Order, 
+        Petition, Will, Trust Deed, Property Agreement, etc.
         
-        Return ONLY the document type name. If unsure, return "Unknown Legal Document".
+        Return ONLY the document type name. If unsure, return "Legal Document".
         
         Document Text (first 500 chars):
         {text[:500]}...
         """
-        response = generate_with_context("You are a legal document classifier.", prompt, temperature=0.1)
-        return response.strip()
+        try:
+            response = generate_with_context("You are a legal document classifier.", prompt, temperature=0.1)
+            return response.strip() or "Legal Document"
+        except Exception as e:
+            logger.error(f"LLM document classification failed: {e}")
+            return "Legal Document"
 
     def summarize_document(self, text: str, doc_type: str) -> Dict:
         """
@@ -34,6 +74,7 @@ class LegalAnalyzer:
         system_prompt = """
         You are an expert legal AI assistant. Your task is to summarize legal documents accurately and conservatively.
         Do not hallucinate facts. If a detail is missing, do not invent it.
+        Focus on extracting key information, parties involved, dates, obligations, and critical clauses.
         """
         
         user_prompt = f"""
@@ -42,21 +83,46 @@ class LegalAnalyzer:
         Please provide a comprehensive legal summary of the following document.
         
         Structure your response as follows:
-        1. **Executive Summary** (200-300 words): A clear, professional summary of the document's purpose and key content.
-        2. **Key Entities**: List names, addresses, dates, case numbers, court names, etc.
-        3. **Important Clauses/Facts**: Bullet points of the most critical legal obligations or facts.
+        
+        **EXECUTIVE SUMMARY**
+        (200-300 words): A clear, professional summary of the document's purpose and key content.
+        
+        **KEY ENTITIES**
+        - Parties: [List all parties with their roles]
+        - Dates: [Important dates mentioned]
+        - Amounts: [Any monetary values]
+        - Locations: [Relevant addresses or jurisdictions]
+        - Reference Numbers: [Case numbers, agreement numbers, etc.]
+        
+        **IMPORTANT CLAUSES/FACTS**
+        - [Bullet point 1: Critical legal obligation or fact]
+        - [Bullet point 2: Critical legal obligation or fact]
+        - [Continue for all critical points]
+        
+        **KEY OBLIGATIONS**
+        - [List main obligations of each party]
+        
+        **VALIDITY & COMPLIANCE**
+        - [Note any validity periods, compliance requirements, or legal formalities mentioned]
         
         Document Text:
         {text[:10000]} 
         (Text truncated if too long)
         """
         
-        summary = generate_with_context(system_prompt, user_prompt, temperature=0.2)
-        
-        return {
-            "summary": summary,
-            "doc_type": doc_type
-        }
+        try:
+            summary = generate_with_context(system_prompt, user_prompt, temperature=0.2)
+            
+            return {
+                "summary": summary,
+                "doc_type": doc_type
+            }
+        except Exception as e:
+            logger.error(f"Document summarization failed: {e}")
+            return {
+                "summary": f"Error generating summary: {str(e)}. Please ensure the LLM service is running.",
+                "doc_type": doc_type
+            }
 
     def translate_document(self, text: str, target_lang: str) -> str:
         """
@@ -64,8 +130,9 @@ class LegalAnalyzer:
         """
         system_prompt = f"""
         You are an expert legal translator. Translate the following legal document into {target_lang}.
-        Maintain strict legal accuracy. Preserve Latin terms or specific legal terminology where appropriate, or provide the standard equivalent in the target language.
-        Do not summarize; translate the full meaning.
+        Maintain strict legal accuracy. Preserve Latin terms or specific legal terminology where appropriate, 
+        or provide the standard equivalent in the target language.
+        Do not summarize; translate the full meaning while maintaining legal precision.
         """
         
         user_prompt = f"""
@@ -74,59 +141,89 @@ class LegalAnalyzer:
         {text[:8000]}
         """
         
-        translation = generate_with_context(system_prompt, user_prompt, temperature=0.1)
-        return translation
+        try:
+            translation = generate_with_context(system_prompt, user_prompt, temperature=0.1)
+            return translation
+        except Exception as e:
+            logger.error(f"Document translation failed: {e}")
+            return f"Error translating document: {str(e)}. Please ensure the LLM service is running."
 
     def verify_legality(self, text: str, doc_type: str) -> Dict:
         """
         Verify the legality and completeness of the document.
         """
         system_prompt = """
-        You are a senior legal compliance officer. Review the document for legal validity, completeness, and admissibility.
+        You are a senior legal compliance officer. Review the document for legal validity, 
+        completeness, and admissibility under Indian law.
+        Be thorough but conservative in your assessment.
         """
         
         user_prompt = f"""
         Document Type: {doc_type}
         
         Analyze this document for the following:
-        1. **Parties Identified**: Are all parties clearly named and identified?
-        2. **Date & Jurisdiction**: Is the date and place of execution clear?
-        3. **Signatures**: Does it indicate where signatures should be? (Note: OCR might miss handwritten signatures, so check for signature blocks).
-        4. **Legal Formalities**: Stamp paper, notarization, witness clauses (if applicable for this doc type).
-        5. **Ambiguity**: Is the language clear or ambiguous?
         
-        Output your analysis in this specific JSON-like format (do not use actual JSON, just this structure):
+        **CHECKLIST ITEMS TO VERIFY:**
+        1. **Parties Identified**: Are all parties clearly named and identified with complete details?
+        2. **Date & Jurisdiction**: Is the date and place of execution clearly mentioned?
+        3. **Signatures**: Does it indicate where signatures should be? (Note: OCR might miss handwritten signatures, so check for signature blocks)
+        4. **Witnesses**: Are witness clauses present if required for this document type?
+        5. **Stamp Paper**: Is there mention of stamp paper value if required?
+        6. **Notarization**: Is notarization mentioned if required for this document type?
+        7. **Legal Formalities**: Are all legal formalities appropriate for this document type present?
+        8. **Clarity**: Is the language clear and unambiguous?
+        9. **Completeness**: Are all standard clauses for this document type present?
+        10. **Compliance**: Does it comply with relevant Indian laws?
         
-        CHECKLIST:
-        [✓/✗] Requirement 1
-        [✓/✗] Requirement 2
-        ...
+        Output your analysis in this specific format:
         
-        ANALYSIS:
-        (Brief explanation of findings)
+        **CHECKLIST:**
+        [✓/✗] Parties Identified: [Brief note]
+        [✓/✗] Date & Jurisdiction: [Brief note]
+        [✓/✗] Signatures: [Brief note]
+        [✓/✗] Witnesses: [Brief note]
+        [✓/✗] Stamp Paper: [Brief note]
+        [✓/✗] Notarization: [Brief note]
+        [✓/✗] Legal Formalities: [Brief note]
+        [✓/✗] Clarity: [Brief note]
+        [✓/✗] Completeness: [Brief note]
+        [✓/✗] Compliance: [Brief note]
         
-        VERDICT:
-        (Choose exactly one: "Legally correct and ready for submission", "Needs modification before submission", "Likely invalid / inadmissible")
+        **DETAILED ANALYSIS:**
+        [Provide a detailed explanation of your findings, highlighting any issues or concerns]
         
-        CONFIDENCE:
-        (0-100%)
+        **RECOMMENDATIONS:**
+        [List specific recommendations for improvement if any issues were found]
+        
+        **VERDICT:**
+        [Choose exactly one: "Legally correct and ready for submission", "Needs modification before submission", "Likely invalid / inadmissible"]
+        
+        **CONFIDENCE:**
+        [Provide confidence level: 0-100%]
         
         Document Text:
         {text[:10000]}
         """
         
-        analysis = generate_with_context(system_prompt, user_prompt, temperature=0.1)
-        
-        # Parse the output to extract structured data (simple parsing)
-        verdict = "Needs modification before submission"
-        if "Legally correct and ready for submission" in analysis:
-            verdict = "Legally correct and ready for submission"
-        elif "Likely invalid" in analysis:
-            verdict = "Likely invalid / inadmissible"
+        try:
+            analysis = generate_with_context(system_prompt, user_prompt, temperature=0.1)
             
-        return {
-            "full_analysis": analysis,
-            "verdict": verdict
-        }
+            # Parse the output to extract structured data (simple parsing)
+            verdict = "Needs modification before submission"
+            if "Legally correct and ready for submission" in analysis:
+                verdict = "Legally correct and ready for submission"
+            elif "Likely invalid" in analysis or "inadmissible" in analysis:
+                verdict = "Likely invalid / inadmissible"
+                
+            return {
+                "full_analysis": analysis,
+                "verdict": verdict
+            }
+        except Exception as e:
+            logger.error(f"Document verification failed: {e}")
+            return {
+                "full_analysis": f"Error verifying document: {str(e)}. Please ensure the LLM service is running.",
+                "verdict": "Unable to verify - service error"
+            }
 
 legal_analyzer = LegalAnalyzer()
