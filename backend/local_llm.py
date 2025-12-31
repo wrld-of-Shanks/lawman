@@ -11,7 +11,10 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Configure Gemini if key is available
 if GOOGLE_API_KEY:
+    logger.info(f"Gemini API Key detected (starts with: {GOOGLE_API_KEY[:4]}...)")
     genai.configure(api_key=GOOGLE_API_KEY)
+else:
+    logger.warning("GOOGLE_API_KEY not found. Gemini will be disabled.")
 
 def _build_ollama_url(path: str) -> str:
     base = OLLAMA_BASE_URL.rstrip("/")
@@ -22,37 +25,37 @@ def _build_ollama_url(path: str) -> str:
 def chat_with_gemini(messages: List[Dict[str, str]], temperature: float = 0.2) -> str:
     """Call Google Gemini API"""
     try:
+        if not GOOGLE_API_KEY:
+            raise ValueError("GOOGLE_API_KEY is missing")
+            
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Convert messages to Gemini format
-        # System prompt is handled separately in Gemini 1.5
         system_instruction = ""
-        history = []
+        last_user_msg = ""
         
         for msg in messages:
             if msg["role"] == "system":
                 system_instruction = msg["content"]
             elif msg["role"] == "user":
-                history.append({"role": "user", "parts": [msg["content"]]})
-            elif msg["role"] == "assistant":
-                history.append({"role": "model", "parts": [msg["content"]]})
+                last_user_msg = msg["content"]
 
-        # Re-initialize model with system instruction
+        # Re-initialize model with system instruction if present
         if system_instruction:
             model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
         
-        # For single turn, we just use the last user message
-        last_msg = history[-1]["parts"][0] if history else ""
-        
+        if not last_user_msg:
+            return "Error: No user message provided."
+            
         response = model.generate_content(
-            last_msg,
+            last_user_msg,
             generation_config=genai.types.GenerationConfig(
                 temperature=temperature,
             )
         )
         return response.text
     except Exception as e:
-        logging.error(f"Gemini API request failed: {e}")
+        logger.error(f"Gemini API request failed: {e}")
         raise e
 
 def chat_with_ollama(
@@ -82,12 +85,9 @@ def chat_with_ollama(
         content = message.get("content")
         if isinstance(content, str):
             return content
-        if "messages" in data and isinstance(data["messages"], list):
-            texts = [m.get("content", "") for m in data["messages"]]
-            return "".join(texts).strip()
         return ""
     except Exception as e:
-        logging.error(f"Ollama chat request failed: {e}")
+        logger.error(f"Ollama chat request failed: {e}")
         raise e
 
 def generate_with_context(system_prompt: str, user_prompt: str, temperature: float = 0.2) -> str:
@@ -97,16 +97,20 @@ def generate_with_context(system_prompt: str, user_prompt: str, temperature: flo
         {"role": "user", "content": user_prompt},
     ]
     
-    # 1. Try Gemini if API key is present
+    # 1. Try Gemini first if API key is present
     if GOOGLE_API_KEY:
         try:
+            logger.info("Attempting to use Gemini...")
             return chat_with_gemini(messages, temperature=temperature)
         except Exception as e:
-            logging.warning(f"Gemini failed, falling back to Ollama if available: {e}")
+            logger.warning(f"Gemini failed: {e}. Falling back to Ollama...")
     
     # 2. Fallback to Ollama
     try:
+        logger.info(f"Attempting to use Ollama at {OLLAMA_BASE_URL}...")
         return chat_with_ollama(messages, temperature=temperature)
     except Exception as e:
-        logging.error(f"All LLM providers failed: {e}")
+        logger.error(f"All LLM providers failed. Last error: {e}")
+        if not GOOGLE_API_KEY:
+            return "Error: GOOGLE_API_KEY is not set in Render environment variables. Please add it to your Render dashboard to enable AI features."
         return f"Error: LLM service unavailable. {str(e)}"

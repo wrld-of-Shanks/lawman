@@ -109,9 +109,11 @@ def verify_token(token: str, token_type: str = "access"):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if token_type == "refresh" and payload.get("type") != "refresh":
+            logger.warning("Token type mismatch: expected refresh token")
             return None
         return payload
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWT Verification failed: {e}. Key used starts with: {SECRET_KEY[:4]}...")
         return None
 
 # Database Functions
