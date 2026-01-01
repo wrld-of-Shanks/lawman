@@ -3,20 +3,25 @@ import logging
 from typing import List, Dict, Optional
 import requests
 import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Ensure environment variables are loaded
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 # Configuration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "lawman-legal")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# Check multiple possible names for the Gemini API key
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
 
 # Configure Gemini if key is available
 if GOOGLE_API_KEY:
     logger.info(f"Gemini API Key detected (starts with: {GOOGLE_API_KEY[:4]}...)")
     genai.configure(api_key=GOOGLE_API_KEY)
 else:
-    logger.warning("GOOGLE_API_KEY not found. Gemini will be disabled.")
+    logger.warning("GOOGLE_API_KEY not found. Gemini will be disabled. Please set GOOGLE_API_KEY in your environment.")
 
 def _build_ollama_url(path: str) -> str:
     base = OLLAMA_BASE_URL.rstrip("/")
