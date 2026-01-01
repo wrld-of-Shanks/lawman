@@ -69,7 +69,13 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    from local_llm import get_google_api_key
+    api_key = get_google_api_key()
+    return {
+        "status": "healthy",
+        "google_api_key_detected": api_key is not None and len(api_key) > 0,
+        "env_keys": [k for k in os.environ.keys() if "API" in k or "KEY" in k or "URL" in k or "MONGODB" in k]
+    }
 
 # Usage stats endpoint
 @app.get("/usage")
