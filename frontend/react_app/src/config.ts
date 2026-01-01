@@ -12,7 +12,7 @@ const getEnv = (key: string, viteKey: string): string => {
 // API Configuration
 const config = {
   // Use VITE_API_BASE_URL if available, otherwise default to production
-  API_BASE_URL: getEnv('REACT_APP_API_URL', 'VITE_API_BASE_URL') || 'https://lawman-9ffr.onrender.com',
+  API_BASE_URL: getEnv('REACT_APP_API_URL', 'VITE_API_BASE_URL') || 'https://lawman-q0ya.onrender.com',
   RAZORPAY_KEY_ID: getEnv('REACT_APP_RAZORPAY_KEY_ID', 'VITE_RAZORPAY_KEY_ID') || 'rzp_test_RjAktAstOznCtJ',
 
   // For translation service (if needed)
