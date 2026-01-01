@@ -221,22 +221,27 @@ class LegalAnalyzer:
         try:
             analysis = generate_with_context(system_prompt, user_prompt, temperature=0.1)
             
-            # Parse the output to extract structured data (simple parsing)
-            verdict = "Needs modification before submission"
-            confidence = "85%" # Default if not found
+            # Try to extract confidence percentage
+            import re
+            conf_match = re.search(r"CONFIDENCE:\s*(\d+)", analysis, re.IGNORECASE)
+            conf_value = 85
+            if conf_match:
+                conf_value = int(conf_match.group(1))
+                confidence = f"{conf_value}%"
+            else:
+                confidence = "85%"
             
-            if "Legally correct and ready for submission" in analysis:
+            # Determine verdict (User request: 95+ is valid)
+            if conf_value >= 95:
+                verdict = "Legally correct and ready for submission. You can proceed to submit it to the needed office."
+            elif "Legally correct and ready for submission" in analysis:
                 verdict = "Legally correct and ready for submission. You can proceed to submit it to the needed office."
             elif "Likely invalid" in analysis or "inadmissible" in analysis:
                 verdict = "Likely invalid / inadmissible. This document needs to be examined and remade."
             elif "Needs modification" in analysis:
                 verdict = "Needs modification before submission. Please examine the recommendations and update the document."
-
-            # Try to extract confidence percentage
-            import re
-            conf_match = re.search(r"CONFIDENCE:\s*(\d+%)", analysis, re.IGNORECASE)
-            if conf_match:
-                confidence = conf_match.group(1)
+            else:
+                verdict = "Needs modification before submission"
                 
             return {
                 "full_analysis": analysis,
