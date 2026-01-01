@@ -11,6 +11,9 @@ import random
 import string
 import smtplib
 from email.mime.text import MIMEText
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     from .mongodb_config import get_users_collection, get_otps_collection, get_user_sessions_collection

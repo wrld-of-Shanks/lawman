@@ -4,6 +4,8 @@ from typing import List, Dict, Optional
 import requests
 import google.generativeai as genai
 
+logger = logging.getLogger(__name__)
+
 # Configuration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "lawman-legal")
