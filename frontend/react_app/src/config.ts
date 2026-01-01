@@ -2,7 +2,7 @@
 const getEnv = (key: string, viteKey: string): string => {
   // Check if we are in a Vite environment
   if (typeof import.meta !== 'undefined' && import.meta.env) {
-    return import.meta.env[viteKey] || '';
+    return (import.meta.env as any)[viteKey] || '';
   }
   // Fallback to process.env for CRA/Node
   // @ts-ignore

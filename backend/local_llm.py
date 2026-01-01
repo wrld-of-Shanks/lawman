@@ -13,54 +13,63 @@ logger = logging.getLogger(__name__)
 # Configuration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "lawman-legal")
-# Check multiple possible names for the Gemini API key
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
-
-# Configure Gemini if key is available
-if GOOGLE_API_KEY:
-    logger.info(f"Gemini API Key detected (starts with: {GOOGLE_API_KEY[:4]}...)")
-    genai.configure(api_key=GOOGLE_API_KEY)
-else:
-    logger.warning("GOOGLE_API_KEY not found. Gemini will be disabled. Please set GOOGLE_API_KEY in your environment.")
-
 def _build_ollama_url(path: str) -> str:
     base = OLLAMA_BASE_URL.rstrip("/")
     if not path.startswith("/"):
         path = "/" + path
     return base + path
 
+def get_google_api_key():
+    """Dynamically fetch the Google API key from environment variables."""
+    return os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
+
 def chat_with_gemini(messages: List[Dict[str, str]], temperature: float = 0.2) -> str:
     """Call Google Gemini API"""
     try:
-        if not GOOGLE_API_KEY:
+        api_key = get_google_api_key()
+        if not api_key:
             raise ValueError("GOOGLE_API_KEY is missing")
             
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        genai.configure(api_key=api_key)
+        
+        # Try different model names in case one is not available in the region/key
+        model_names = ['gemini-1.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest', 'gemini-pro']
+        last_err = None
         
         # Convert messages to Gemini format
         system_instruction = ""
         last_user_msg = ""
-        
         for msg in messages:
             if msg["role"] == "system":
                 system_instruction = msg["content"]
             elif msg["role"] == "user":
                 last_user_msg = msg["content"]
 
-        # Re-initialize model with system instruction if present
-        if system_instruction:
-            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
-        
         if not last_user_msg:
             return "Error: No user message provided."
-            
-        response = model.generate_content(
-            last_user_msg,
-            generation_config=genai.types.GenerationConfig(
-                temperature=temperature,
-            )
-        )
-        return response.text
+
+        for model_name in model_names:
+            try:
+                logger.info(f"Trying Gemini model: {model_name}")
+                if system_instruction:
+                    model = genai.GenerativeModel(model_name, system_instruction=system_instruction)
+                else:
+                    model = genai.GenerativeModel(model_name)
+                
+                response = model.generate_content(
+                    last_user_msg,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=temperature,
+                    )
+                )
+                return response.text
+            except Exception as e:
+                last_err = e
+                logger.warning(f"Model {model_name} failed: {e}")
+                continue
+        
+        raise last_err or Exception("All Gemini models failed")
+        
     except Exception as e:
         logger.error(f"Gemini API request failed: {e}")
         raise e
@@ -104,10 +113,11 @@ def generate_with_context(system_prompt: str, user_prompt: str, temperature: flo
         {"role": "user", "content": user_prompt},
     ]
     
+    api_key = get_google_api_key()
+    
     # 1. Try Gemini first if API key is present
-    if GOOGLE_API_KEY:
+    if api_key:
         try:
-            logger.info("Attempting to use Gemini...")
             return chat_with_gemini(messages, temperature=temperature)
         except Exception as e:
             logger.warning(f"Gemini failed: {e}. Falling back to Ollama...")
@@ -118,6 +128,7 @@ def generate_with_context(system_prompt: str, user_prompt: str, temperature: flo
         return chat_with_ollama(messages, temperature=temperature)
     except Exception as e:
         logger.error(f"All LLM providers failed. Last error: {e}")
-        if not GOOGLE_API_KEY:
-            return "Error: GOOGLE_API_KEY is not set in Render environment variables. Please add it to your Render dashboard to enable AI features."
-        return f"Error: LLM service unavailable. {str(e)}"
+        if not api_key:
+            return "Error: GOOGLE_API_KEY is not set. Please check your .env file (local) or Render Dashboard (production)."
+        return f"Error: LLM service unavailable (Gemini & Ollama both failed). Details: {str(e)}"
+
