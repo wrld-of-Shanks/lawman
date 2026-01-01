@@ -56,8 +56,9 @@ function App() {
     }
   };
 
-  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెలుగు', 'మరాಠೀ'];
+  const languages = ['English', 'हिंदी', 'ಕನ್ನಡ', 'தமிழ்', 'తెలుగు', 'మరాఠీ'];
   const [selectedLanguage, setSelectedLanguage] = useState<string>(() => localStorage.getItem('specter_lang') || 'English');
+  const [targetLanguage, setTargetLanguage] = useState<string>('Hindi');
 
   // Listen for voice assistant navigation events
   useEffect(() => {
@@ -206,7 +207,7 @@ function App() {
           text: extractedText,
           doc_type: docType,
           action: action,
-          target_lang: selectedLanguage
+          target_lang: action === 'translate' ? targetLanguage : selectedLanguage
         })
       });
 
@@ -516,6 +517,21 @@ function App() {
                   </div>
                 </div>
 
+                {selectedAction === 'translate' && (
+                  <div className="target-language-selector" style={{ marginBottom: '20px', animation: 'fadeIn 0.3s ease-out' }}>
+                    <p className="selector-label">Translate to:</p>
+                    <select
+                      value={targetLanguage}
+                      onChange={(e) => setTargetLanguage(e.target.value)}
+                      className="target-lang-dropdown"
+                    >
+                      {languages.filter(l => l !== 'English').map(lang => (
+                        <option key={lang} value={lang}>{lang}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="file-upload-wrapper">
                   <input
                     type="file"
@@ -579,7 +595,7 @@ function App() {
                             text: data.text,
                             doc_type: data.doc_type,
                             action: selectedAction,
-                            target_lang: selectedLanguage
+                            target_lang: selectedAction === 'translate' ? targetLanguage : selectedLanguage
                           })
                         });
                         const analyzeData = await analyzeResp.json();
@@ -619,11 +635,22 @@ function App() {
                       <h4>Summarize</h4>
                       <p>Get a concise legal summary</p>
                     </button>
-                    <button className="action-card" onClick={() => handleAnalyze('translate')}>
-                      <span className="icon">🌐</span>
-                      <h4>Translate</h4>
-                      <p>Translate to local language</p>
-                    </button>
+                    <div className="action-card-wrapper">
+                      <button className="action-card" onClick={() => handleAnalyze('translate')}>
+                        <span className="icon">🌐</span>
+                        <h4>Translate</h4>
+                        <p>Translate to {targetLanguage}</p>
+                      </button>
+                      <select
+                        value={targetLanguage}
+                        onChange={(e) => setTargetLanguage(e.target.value)}
+                        className="card-lang-select"
+                      >
+                        {languages.filter(l => l !== 'English').map(lang => (
+                          <option key={lang} value={lang}>{lang}</option>
+                        ))}
+                      </select>
+                    </div>
                     <button className="action-card" onClick={() => handleAnalyze('verify')}>
                       <span className="icon">⚖️</span>
                       <h4>Verify Legality</h4>
